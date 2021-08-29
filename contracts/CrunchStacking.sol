@@ -19,51 +19,44 @@ contract CrunchStacking is Ownable {
         Stake[] stakes;
     }
 
-    event WithdrawEvent(address _to, uint reward);
+    event YieldUpdated(uint256 value);
+    event WithdrawEvent(address _to, uint256 reward);
 
-    uint256 public yield = 20;
-    Stakeholder[] public stakeholders;
     CrunchToken crunch;
-    
-    constructor(CrunchToken _crunch) {
+    uint256 public yield;
+    Stakeholder[] public stakeholders;
+
+    constructor(CrunchToken _crunch, uint256 _yield) {
         crunch = _crunch;
+        yield = _yield;
     }
 
-    function deposit(uint amount) public payable {
-        // crunch.approve(address(this), amount);
-        crunch.transferFrom(msg.sender, address(this), amount);
-        
+    function deposit(uint256 amount) public payable {
         Stakeholder storage stakeholder = addStakeholder(msg.sender);
 
-        stakeholder.stakes.push(Stake({
-            amount: amount,
-            since: block.timestamp,
-            debt: 0
-        }));
+        stakeholder.stakes.push(
+            Stake({amount: amount, since: block.timestamp, debt: 0})
+        );
     }
 
     function withdraw() public payable {
-        (bool _isStakeholder, uint256 stakeholderIndex) = isStakeholder(
-            msg.sender
-        );
+        (bool found, uint256 stakeholderIndex) = findStakeholder(msg.sender);
 
-        if (!_isStakeholder) {
+        if (!found) {
             revert("not currently stacking");
         }
 
         Stakeholder storage stakeholder = stakeholders[stakeholderIndex];
-        uint reward = computeRewardOf(stakeholder);
+        uint256 reward = computeRewardOf(stakeholder);
         removeStakeholderAt(stakeholderIndex);
 
         emit WithdrawEvent(msg.sender, reward);
     }
 
     function computeReward(address _stakeholder) public view returns (uint256) {
-        (bool _isStakeholder, uint256 stakeholderIndex) = isStakeholder(
-            _stakeholder
-        );
+        (bool found, uint256 stakeholderIndex) = findStakeholder(_stakeholder);
 
-        if (!_isStakeholder) {
+        if (!found) {
             return 0;
         }
 
@@ -82,7 +75,7 @@ contract CrunchStacking is Ownable {
             Stake storage stake = stakeholder.stakes[index];
 
             reward +=
-                (((block.timestamp - stake.since) / 1 seconds) * stake.amount) /
+                (((block.timestamp - stake.since) / 30 days) * stake.amount) /
                 yield;
         }
 
@@ -93,9 +86,17 @@ contract CrunchStacking is Ownable {
         require(yield != to, "yield value must be different");
 
         yield = to;
+
+        emit YieldUpdated(to);
     }
 
-    function isStakeholder(address _address)
+    function isStakeholder(address _address) public view returns (bool) {
+        (bool found, ) = findStakeholder(_address);
+
+        return found;
+    }
+
+    function findStakeholder(address _address)
         public
         view
         returns (bool, uint256)
@@ -111,12 +112,12 @@ contract CrunchStacking is Ownable {
         internal
         returns (Stakeholder storage)
     {
-        (bool _isStakeholder, uint256 index) = isStakeholder(_stakeholder);
+        (bool found, uint256 index) = findStakeholder(_stakeholder);
 
-        if (!_isStakeholder) {
+        if (!found) {
             stakeholders.push();
             index = stakeholders.length - 1;
-            
+
             Stakeholder storage stakeholder = stakeholders[index];
             stakeholder.to = _stakeholder;
         }
@@ -125,9 +126,9 @@ contract CrunchStacking is Ownable {
     }
 
     function removeStakeholder(address _stakeholder) internal {
-        (bool _isStakeholder, uint256 index) = isStakeholder(_stakeholder);
+        (bool found, uint256 index) = findStakeholder(_stakeholder);
 
-        if (_isStakeholder) {
+        if (found) {
             removeStakeholderAt(index);
         }
     }
