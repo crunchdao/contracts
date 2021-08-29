@@ -53,6 +53,18 @@ contract CrunchStacking is Ownable {
         emit WithdrawEvent(msg.sender, reward);
     }
 
+    function totalReward() public view returns (uint256) {
+        uint256 reward = 0;
+
+        for (uint256 index = 0; index < stakeholders.length; index++) {
+            Stakeholder storage stakeholder = stakeholders[index];
+
+            reward += computeRewardOf(stakeholder);
+        }
+
+        return reward;
+    }
+
     function computeReward(address _stakeholder) public view returns (uint256) {
         (bool found, uint256 stakeholderIndex) = findStakeholder(_stakeholder);
 
@@ -74,17 +86,26 @@ contract CrunchStacking is Ownable {
         for (uint256 index = 0; index < stakeholder.stakes.length; index++) {
             Stake storage stake = stakeholder.stakes[index];
 
-            reward +=
-                (((block.timestamp - stake.since) / 30 days) * stake.amount) /
-                yield;
+            reward += computeStakeReward(stake);
         }
 
         return reward;
     }
 
+    function computeStakeReward(Stake storage stake)
+        internal
+        view
+        returns (uint256)
+    {
+        return
+            ((((block.timestamp - stake.since) / 30 days) * stake.amount) /
+                yield) + stake.debt;
+    }
+
     function setYield(uint256 to) public onlyOwner {
         require(yield != to, "yield value must be different");
 
+        updateDepts();
         yield = to;
 
         emit YieldUpdated(to);
@@ -94,6 +115,26 @@ contract CrunchStacking is Ownable {
         (bool found, ) = findStakeholder(_address);
 
         return found;
+    }
+
+    function updateDepts() internal returns (uint256 totalDept) {
+        for (uint256 index = 0; index < stakeholders.length; index++) {
+            totalDept += updateDeptsOf(stakeholders[index]);
+        }
+    }
+
+    function updateDeptsOf(Stakeholder storage stakeholder)
+        internal
+        returns (uint256 totalDept)
+    {
+        for (uint256 index = 0; index < stakeholder.stakes.length; index++) {
+            Stake storage stake = stakeholder.stakes[index];
+
+            stake.debt += computeStakeReward(stake);
+            stake.since = block.timestamp;
+
+            totalDept += stake.debt;
+        }
     }
 
     function findStakeholder(address _address)

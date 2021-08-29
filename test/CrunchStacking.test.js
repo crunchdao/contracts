@@ -87,4 +87,26 @@ contract("Crunch Stacking", async (accounts) => {
   it("should not be able to withdraw if not stacking", async () => {
     expect(stacking.withdraw()).to.eventually.be.rejected;
   });
+
+  it("should accumulate dept on yield change", async () => {
+    const yield1 = 2,
+      yield2 = 4;
+    const amount = 100;
+    const reward = 50 + 100;
+
+    await stacking.setYield(yield1);
+
+    await stacking.deposit(amount);
+
+    const secondsUntilNextMonth = 2629800;
+    await advance.timeAndBlock(secondsUntilNextMonth);
+
+    await stacking.setYield(yield2);
+
+    await advance.timeAndBlock(secondsUntilNextMonth);
+
+    expect(
+      stacking.computeReward(accounts[0])
+    ).to.eventually.be.a.bignumber.equal(new BN(reward));
+  });
 });
