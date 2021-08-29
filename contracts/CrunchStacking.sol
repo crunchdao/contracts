@@ -97,7 +97,7 @@ contract CrunchStacking is Ownable {
     }
 
     function findStakeholder(address _address)
-        public
+        internal
         view
         returns (bool, uint256)
     {
