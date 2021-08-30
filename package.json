@@ -1,0 +1,23 @@
+{
+  "name": "datacrunch",
+  "version": "1.0.0",
+  "description": "DataCrunch Token Contracts",
+  "directories": {
+    "test": "test"
+  },
+  "dependencies": {
+    "chai-as-promised": "^7.1.1",
+    "chai": "^4.3.4",
+    "chai-bn": "^0.3.0"
+  },
+  "devDependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/datacrunch-com/datacrunch.git"
+  },
+  "author": "DataCrunch",
+  "bugs": {
+    "url": "https://github.com/datacrunch-com/datacrunch/issues"
+  },
+  "homepage": "https://github.com/datacrunch-com/datacrunch#readme"
+}
