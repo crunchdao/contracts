@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.2;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
+import "./IERC677Receiver.sol";
 
+import "./HasCrunchParent.sol";
 import "./CrunchToken.sol";
 
-contract CrunchStacking is Ownable {
+contract CrunchStacking is HasCrunchParent, IERC677Receiver {
     struct Stake {
         uint256 amount;
         uint256 since;
@@ -22,21 +21,17 @@ contract CrunchStacking is Ownable {
     event YieldUpdated(uint256 value);
     event WithdrawEvent(address _to, uint256 reward);
 
-    CrunchToken crunch;
     uint256 public yield;
     Stakeholder[] public stakeholders;
 
-    constructor(CrunchToken _crunch, uint256 _yield) {
-        crunch = _crunch;
+    constructor(CrunchToken _crunch, uint256 _yield) HasCrunchParent(_crunch) {
         yield = _yield;
     }
 
     function deposit(uint256 amount) public payable {
-        Stakeholder storage stakeholder = addStakeholder(msg.sender);
+        crunch.transferFrom(msg.sender, address(this), amount);
 
-        stakeholder.stakes.push(
-            Stake({amount: amount, since: block.timestamp, debt: 0})
-        );
+        _deposit(msg.sender, amount);
     }
 
     function withdraw() public payable {
@@ -51,6 +46,24 @@ contract CrunchStacking is Ownable {
         removeStakeholderAt(stakeholderIndex);
 
         emit WithdrawEvent(msg.sender, reward);
+    }
+
+    function onTokenTransfer(
+        address sender,
+        uint256 value,
+        bytes memory data
+    ) external override onlyCrunchParent {
+        data; /* silence unused */
+
+        _deposit(sender, value);
+    }
+
+    function _deposit(address from, uint256 amount) private {
+        Stakeholder storage stakeholder = addStakeholder(from);
+
+        stakeholder.stakes.push(
+            Stake({amount: amount, since: block.timestamp, debt: 0})
+        );
     }
 
     function totalReward() public view returns (uint256) {
