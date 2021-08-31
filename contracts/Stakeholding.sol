@@ -129,9 +129,9 @@ library Stakeholding {
         view
         returns (uint256)
     {
-        uint256 numberOfDays = ((block.timestamp - stake.start) / 1 seconds);
+        uint256 numberOfDays = ((block.timestamp - stake.start) / 1 days);
 
-        return (stake.amount * numberOfDays * yield) / 10000;
+        return stake.amount * numberOfDays * yield / 1_000_000;
     }
 
     function updateDebts(Stakeholder[] storage stakeholders, uint256 yield)

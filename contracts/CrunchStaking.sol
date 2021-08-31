@@ -22,6 +22,15 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
 
     event EmergencyWithdrawEvent(address indexed to, uint256 staked);
 
+    /**
+     * The `yield` is the amount of tokens rewarded for 1 million CRUNCH staked over a 1 day duration.
+     *
+     * e.g.:
+     *  to find the yield for an APR of 24%:
+     *    0,24 * 1.000.000 = 240.000    <- tokens rewarded per year
+     *    240.000 / 365,25 ~= 657       <- tokens rewarded per day
+     *    --> the yield should be 657 for a 24% APR.
+     */
     uint256 public yield;
     Stakeholding.Stakeholder[] public stakeholders;
 
@@ -53,7 +62,10 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
 
     function setYield(uint256 to) public onlyOwner {
         require(yield != to, "Staking: yield value must be different");
-        require(yield <= 400, "Staking: yield must be below 4%");
+        require(
+            yield <= 1000,
+            "Staking: yield must be below 1000/1M Token/day (or 0.1%/day)"
+        );
 
         uint256 debt = stakeholders.updateDebts(yield);
         yield = to;

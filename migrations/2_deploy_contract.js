@@ -6,5 +6,5 @@ module.exports = async (deployer) => {
   await deployer.deploy(CrunchToken);
   await deployer.deploy(Stakeholding)
   await deployer.link(Stakeholding, [CrunchStaking])
-  await deployer.deploy(CrunchStaking, CrunchToken.address, 1);
+  await deployer.deploy(CrunchStaking, CrunchToken.address, 657 /* see yield doc */);
 };
