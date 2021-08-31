@@ -11,7 +11,7 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
     using Stakeholding for Stakeholding.Stakeholder;
     using Stakeholding for Stakeholding.Stake;
 
-    event YieldUpdated(uint256 value);
+    event YieldUpdated(uint256 yield, uint256 totalDebt);
     event WithdrawEvent(
         address indexed to,
         uint256 reward,
@@ -59,10 +59,10 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
         require(yield != to, "yield value must be different");
         require(yield <= 400, "yield must be below 4%");
 
-        updateDepts();
+        uint totalDebt = stakeholders.updateDebts(yield);
         yield = to;
 
-        emit YieldUpdated(to);
+        emit YieldUpdated(yield, totalDebt);
     }
 
     function totalStaked() public view returns (uint256) {
