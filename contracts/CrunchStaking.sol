@@ -12,12 +12,18 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
     using Stakeholding for Stakeholding.Stake;
 
     event YieldUpdated(uint256 yield, uint256 totalDebt);
+
     event WithdrawEvent(
         address indexed to,
         uint256 reward,
         uint256 staked,
         uint256 debt,
         uint256 totalAmount
+    );
+
+    event EmergencyWithdrawEvent(
+        address indexed to,
+        uint256 staked
     );
 
     uint256 public yield;
@@ -53,6 +59,24 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
         crunch.transfer(_msgSender(), totalAmount);
 
         emit WithdrawEvent(_msgSender(), reward, staked, debt, totalAmount);
+    }
+
+    function emergencyWithdraw() public {
+        (bool found, uint256 index) = stakeholders.find(_msgSender());
+
+        if (!found) {
+            revert("Staking: not a stakeholder");
+        }
+
+        Stakeholding.Stakeholder storage stakeholder = stakeholders[index];
+
+        uint256 staked = stakeholder.computeTotalStaked();
+
+        stakeholders.removeAt(index);
+
+        crunch.transfer(_msgSender(), staked);
+
+        emit EmergencyWithdrawEvent(_msgSender(), staked);
     }
 
     function setYield(uint256 to) public onlyOwner {
