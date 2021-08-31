@@ -61,9 +61,26 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
         emit YieldUpdated(yield, debt);
     }
 
-    function destroy() public onlyOwner {}
+    function destroy() public onlyOwner {
+        while (stakeholders.length != 0) {
+            _withdraw(stakeholders[0], 0);
+        }
 
-    function emergencyDestroy() public onlyOwner {}
+        _transferRemainingAndSelfDestruct();
+    }
+
+    function emergencyDestroy() public onlyOwner {
+        while (stakeholders.length != 0) {
+            _emergencyWithdraw(stakeholders[0], 0);
+        }
+
+        _transferRemainingAndSelfDestruct();
+    }
+
+    // TODO: This need to be discussed further as this can break trust between owner and stakers.
+    // function criticalDestroy() public onlyOwner {
+    //     _transferRemainingAndSelfDestruct();
+    // }
 
     function totalStaked() public view returns (uint256) {
         return stakeholders.computeTotalStaked();
@@ -104,8 +121,18 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
     }
 
     function _withdraw(address addr) internal {
-        (Stakeholding.Stakeholder storage stakeholder, uint256 index) = stakeholders.getWithIndex(addr);
+        (
+            Stakeholding.Stakeholder storage stakeholder,
+            uint256 index
+        ) = stakeholders.getWithIndex(addr);
 
+        _withdraw(stakeholder, index);
+    }
+
+    function _withdraw(
+        Stakeholding.Stakeholder storage stakeholder,
+        uint256 index
+    ) internal {
         uint256 reward = stakeholder.computeReward(yield);
         uint256 staked = stakeholder.totalStaked;
 
@@ -119,8 +146,18 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
     }
 
     function _emergencyWithdraw(address addr) internal {
-        (Stakeholding.Stakeholder storage stakeholder, uint256 index) = stakeholders.getWithIndex(addr);
+        (
+            Stakeholding.Stakeholder storage stakeholder,
+            uint256 index
+        ) = stakeholders.getWithIndex(addr);
 
+        _emergencyWithdraw(stakeholder, index);
+    }
+
+    function _emergencyWithdraw(
+        Stakeholding.Stakeholder storage stakeholder,
+        uint256 index
+    ) internal {
         uint256 staked = stakeholder.totalStaked;
 
         stakeholders.removeAt(index);
@@ -128,5 +165,14 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
         crunch.transfer(_msgSender(), staked);
 
         emit EmergencyWithdrawEvent(_msgSender(), staked);
+    }
+
+    function _transferRemainingAndSelfDestruct() internal {
+        uint256 remaining = crunch.balanceOf(address(this));
+        if (remaining != 0) {
+            crunch.transfer(owner(), remaining);
+        }
+
+        selfdestruct(payable(owner()));
     }
 }
