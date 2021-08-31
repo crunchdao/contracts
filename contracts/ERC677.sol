@@ -19,7 +19,7 @@ abstract contract ERC677 is IERC677, ERC20 {
     ) public virtual override returns (bool success) {
         super.transfer(to, value);
 
-        emit Transfer(msg.sender, to, value, data);
+        emit TransferAndCall(msg.sender, to, value, data);
 
         if (isContract(to)) {
             contractFallback(to, value, data);

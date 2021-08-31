@@ -10,7 +10,7 @@ interface IERC677 is IERC20 {
         bytes memory data
     ) external returns (bool success);
 
-    event Transfer(
+    event TransferAndCall(
         address indexed from,
         address indexed to,
         uint256 value,
