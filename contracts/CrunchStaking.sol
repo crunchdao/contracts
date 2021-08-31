@@ -6,7 +6,7 @@ import "./IERC677Receiver.sol";
 import "./HasCrunchParent.sol";
 import "./CrunchToken.sol";
 
-contract CrunchStacking is HasCrunchParent, IERC677Receiver {
+contract CrunchStaking is HasCrunchParent, IERC677Receiver {
     struct Stake {
         uint256 amount;
         uint256 since;
