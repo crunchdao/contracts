@@ -4,12 +4,13 @@ pragma solidity ^0.8.2;
 library Stakeholding {
     struct Stake {
         uint256 amount;
-        uint256 since;
-        uint256 debt;
+        uint256 start;
     }
 
     struct Stakeholder {
         address to;
+        uint256 totalStaked;
+        uint256 rewardDebt;
         Stake[] stakes;
     }
 
@@ -29,18 +30,28 @@ library Stakeholding {
         return (false, 0);
     }
 
+    function getWithIndex(Stakeholder[] storage stakeholders, address addr)
+        public
+        view
+        returns (Stakeholder storage, uint256)
+    {
+        (bool found, uint256 index) = find(stakeholders, addr);
+
+        if (found) {
+            return (stakeholders[index], index);
+        }
+
+        revert("Stakeholding: not in stakeholder list");
+    }
+
     function get(Stakeholder[] storage stakeholders, address addr)
         public
         view
         returns (Stakeholder storage)
     {
-        (bool found, uint256 index) = find(stakeholders, addr);
+        (Stakeholder storage stakeholder, ) = getWithIndex(stakeholders, addr);
 
-        if (found) {
-            return stakeholders[index];
-        }
-
-        revert("Stakeholding: not in stakeholder list");
+        return stakeholder;
     }
 
     function add(Stakeholder[] storage stakeholders, address addr)
@@ -71,7 +82,8 @@ library Stakeholding {
     function removeAt(Stakeholder[] storage stakeholders, uint256 index)
         public
     {
-        delete stakeholders[index];
+        stakeholders[index] = stakeholders[stakeholders.length - 1];
+        stakeholders.pop();
     }
 
     function computeTotalStaked(Stakeholder[] storage stakeholders)
@@ -82,42 +94,7 @@ library Stakeholding {
         for (uint256 index = 0; index < stakeholders.length; index++) {
             Stakeholder storage stakeholder = stakeholders[index];
 
-            total += computeTotalStaked(stakeholder);
-        }
-    }
-
-    function computeTotalStaked(Stakeholder storage stakeholder)
-        public
-        view
-        returns (uint256 staked)
-    {
-        for (uint256 index = 0; index < stakeholder.stakes.length; index++) {
-            Stake storage stake = stakeholder.stakes[index];
-
-            staked += stake.amount;
-        }
-    }
-
-    function computeTotalDebt(Stakeholder[] storage stakeholders)
-        public
-        view
-        returns (uint256 total)
-    {
-        for (uint256 index = 0; index < stakeholders.length; index++) {
-            Stakeholder storage stakeholder = stakeholders[index];
-
-            total += computeTotalDebt(stakeholder);
-        }
-    }
-    function computeTotalDebt(Stakeholder storage stakeholder)
-        public
-        view
-        returns (uint256 total)
-    {
-        for (uint256 index = 0; index < stakeholder.stakes.length; index++) {
-            Stake storage stake = stakeholder.stakes[index];
-
-            total += stake.debt;
+            total += stakeholder.totalStaked;
         }
     }
 
@@ -143,6 +120,8 @@ library Stakeholding {
 
             reward += computeReward(stake, yield);
         }
+
+        reward += stakeholder.rewardDebt;
     }
 
     function computeReward(Stake storage stake, uint256 yield)
@@ -150,7 +129,7 @@ library Stakeholding {
         view
         returns (uint256)
     {
-        uint256 numberOfDays = ((block.timestamp - stake.since) / 1 seconds);
+        uint256 numberOfDays = ((block.timestamp - stake.start) / 1 seconds);
 
         return (stake.amount * numberOfDays * yield) / 10000;
     }
@@ -173,10 +152,12 @@ library Stakeholding {
         for (uint256 index = 0; index < stakeholder.stakes.length; index++) {
             Stake storage stake = stakeholder.stakes[index];
 
-            stake.debt += computeReward(stake, yield);
-            stake.since = block.timestamp;
+            uint256 debt = computeReward(stake, yield);
+            stakeholder.rewardDebt += debt;
 
-            totalDebt += stake.debt;
+            stake.start = block.timestamp;
+
+            totalDebt += debt;
         }
     }
 
@@ -184,7 +165,7 @@ library Stakeholding {
         public
     {
         stakeholder.stakes.push(
-            Stake({amount: amount, since: block.timestamp, debt: 0})
+            Stake({amount: amount, start: block.timestamp})
         );
     }
 }

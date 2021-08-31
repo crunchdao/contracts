@@ -17,14 +17,10 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
         address indexed to,
         uint256 reward,
         uint256 staked,
-        uint256 debt,
         uint256 totalAmount
     );
 
-    event EmergencyWithdrawEvent(
-        address indexed to,
-        uint256 staked
-    );
+    event EmergencyWithdrawEvent(address indexed to, uint256 staked);
 
     uint256 public yield;
     Stakeholding.Stakeholder[] public stakeholders;
@@ -40,61 +36,41 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
     }
 
     function withdraw() public {
-        (bool found, uint256 index) = stakeholders.find(_msgSender());
+        _withdraw(_msgSender());
+    }
 
-        if (!found) {
-            revert("Staking: not a stakeholder");
-        }
-
-        Stakeholding.Stakeholder storage stakeholder = stakeholders[index];
-
-        uint256 reward = stakeholder.computeReward(yield);
-        uint256 staked = stakeholder.computeTotalStaked();
-        uint256 debt = stakeholder.computeTotalDebt();
-
-        stakeholders.removeAt(index);
-
-        uint256 totalAmount = reward + staked + debt;
-
-        crunch.transfer(_msgSender(), totalAmount);
-
-        emit WithdrawEvent(_msgSender(), reward, staked, debt, totalAmount);
+    function forceWithdraw(address addr) public onlyOwner {
+        _withdraw(addr);
     }
 
     function emergencyWithdraw() public {
-        (bool found, uint256 index) = stakeholders.find(_msgSender());
+        _emergencyWithdraw(_msgSender());
+    }
 
-        if (!found) {
-            revert("Staking: not a stakeholder");
-        }
-
-        Stakeholding.Stakeholder storage stakeholder = stakeholders[index];
-
-        uint256 staked = stakeholder.computeTotalStaked();
-
-        stakeholders.removeAt(index);
-
-        crunch.transfer(_msgSender(), staked);
-
-        emit EmergencyWithdrawEvent(_msgSender(), staked);
+    function forceEmergencyWithdraw(address addr) public onlyOwner {
+        _emergencyWithdraw(addr);
     }
 
     function setYield(uint256 to) public onlyOwner {
         require(yield != to, "Staking: yield value must be different");
         require(yield <= 400, "Staking: yield must be below 4%");
 
-        uint debt = stakeholders.updateDebts(yield);
+        uint256 debt = stakeholders.updateDebts(yield);
         yield = to;
 
         emit YieldUpdated(yield, debt);
     }
+
+    function destroy() public onlyOwner {}
+
+    function emergencyDestroy() public onlyOwner {}
 
     function totalStaked() public view returns (uint256) {
         return stakeholders.computeTotalStaked();
     }
 
     function totalStakedOf(address addr) public view returns (uint256) {
-        return stakeholders.get(addr).computeTotalStaked();
+        return stakeholders.get(addr).totalStaked;
     }
 
     function totalReward() public view returns (uint256) {
@@ -103,14 +79,6 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
 
     function totalRewardOf(address addr) public view returns (uint256) {
         return stakeholders.get(addr).computeReward(yield);
-    }
-
-    function totalDebt() public view returns (uint256) {
-        return stakeholders.computeTotalDebt();
-    }
-
-    function totalDebtOf(address addr) public view returns (uint256) {
-        return stakeholders.get(addr).computeTotalDebt();
     }
 
     function isStaking(address addr) public view returns (bool) {
@@ -133,5 +101,32 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
         Stakeholding.Stakeholder storage stakeholder = stakeholders.add(from);
 
         stakeholder.createStake(amount);
+    }
+
+    function _withdraw(address addr) internal {
+        (Stakeholding.Stakeholder storage stakeholder, uint256 index) = stakeholders.getWithIndex(addr);
+
+        uint256 reward = stakeholder.computeReward(yield);
+        uint256 staked = stakeholder.totalStaked;
+
+        stakeholders.removeAt(index);
+
+        uint256 totalAmount = reward + staked;
+
+        crunch.transfer(stakeholder.to, totalAmount);
+
+        emit WithdrawEvent(stakeholder.to, reward, staked, totalAmount);
+    }
+
+    function _emergencyWithdraw(address addr) internal {
+        (Stakeholding.Stakeholder storage stakeholder, uint256 index) = stakeholders.getWithIndex(addr);
+
+        uint256 staked = stakeholder.totalStaked;
+
+        stakeholders.removeAt(index);
+
+        crunch.transfer(_msgSender(), staked);
+
+        emit EmergencyWithdrawEvent(_msgSender(), staked);
     }
 }
