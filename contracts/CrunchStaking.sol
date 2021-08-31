@@ -37,7 +37,7 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
         (bool found, uint256 index) = stakeholders.find(_msgSender());
 
         if (!found) {
-            revert("not currently stacking");
+            revert("Staking: not a stakeholder");
         }
 
         Stakeholding.Stakeholder storage stakeholder = stakeholders[index];
@@ -56,13 +56,13 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
     }
 
     function setYield(uint256 to) public onlyOwner {
-        require(yield != to, "yield value must be different");
-        require(yield <= 400, "yield must be below 4%");
+        require(yield != to, "Staking: yield value must be different");
+        require(yield <= 400, "Staking: yield must be below 4%");
 
-        uint totalDebt = stakeholders.updateDebts(yield);
+        uint debt = stakeholders.updateDebts(yield);
         yield = to;
 
-        emit YieldUpdated(yield, totalDebt);
+        emit YieldUpdated(yield, debt);
     }
 
     function totalStaked() public view returns (uint256) {
@@ -70,13 +70,7 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
     }
 
     function totalStakedOf(address addr) public view returns (uint256) {
-        (bool found, uint256 index) = stakeholders.find(addr);
-
-        if (!found) {
-            return 0;
-        }
-
-        return stakeholders[index].computeTotalStaked();
+        return stakeholders.get(addr).computeTotalStaked();
     }
 
     function totalReward() public view returns (uint256) {
@@ -84,23 +78,21 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
     }
 
     function totalRewardOf(address addr) public view returns (uint256) {
-        (bool found, uint256 index) = stakeholders.find(addr);
+        return stakeholders.get(addr).computeReward(yield);
+    }
 
-        if (!found) {
-            return 0;
-        }
+    function totalDebt() public view returns (uint256) {
+        return stakeholders.computeReward(yield);
+    }
 
-        return stakeholders[index].computeReward(yield);
+    function totalDebtOf(address addr) public view returns (uint256) {
+        return stakeholders.get(addr).computeTotalDebt();
     }
 
     function isStaking(address addr) public view returns (bool) {
         (bool found, ) = stakeholders.find(addr);
 
         return found;
-    }
-
-    function updateDepts() internal onlyOwner returns (uint256 totalDept) {
-        return stakeholders.updateDebts(yield);
     }
 
     function onTokenTransfer(

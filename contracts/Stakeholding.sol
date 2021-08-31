@@ -29,6 +29,20 @@ library Stakeholding {
         return (false, 0);
     }
 
+    function get(Stakeholder[] storage stakeholders, address addr)
+        public
+        view
+        returns (Stakeholder storage)
+    {
+        (bool found, uint256 index) = find(stakeholders, addr);
+
+        if (found) {
+            return stakeholders[index];
+        }
+
+        revert("Stakeholding: not in stakeholder list");
+    }
+
     function add(Stakeholder[] storage stakeholders, address addr)
         public
         returns (Stakeholder storage)
