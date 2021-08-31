@@ -82,7 +82,7 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
     }
 
     function totalDebt() public view returns (uint256) {
-        return stakeholders.computeReward(yield);
+        return stakeholders.computeTotalDebt();
     }
 
     function totalDebtOf(address addr) public view returns (uint256) {

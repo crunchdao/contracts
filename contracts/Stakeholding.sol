@@ -98,15 +98,26 @@ library Stakeholding {
         }
     }
 
+    function computeTotalDebt(Stakeholder[] storage stakeholders)
+        public
+        view
+        returns (uint256 total)
+    {
+        for (uint256 index = 0; index < stakeholders.length; index++) {
+            Stakeholder storage stakeholder = stakeholders[index];
+
+            total += computeTotalDebt(stakeholder);
+        }
+    }
     function computeTotalDebt(Stakeholder storage stakeholder)
         public
         view
-        returns (uint256 staked)
+        returns (uint256 total)
     {
         for (uint256 index = 0; index < stakeholder.stakes.length; index++) {
             Stake storage stake = stakeholder.stakes[index];
 
-            staked += stake.debt;
+            total += stake.debt;
         }
     }
 
