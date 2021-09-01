@@ -5,6 +5,6 @@ import "./TokenVesting.sol";
 
 contract CrunchVesting is TokenVesting {
     constructor(address beneficiary, uint256 cliffDurationInYear, uint256 durationInYear) public
-        TokenVesting(beneficiary, block.timestamp, cliffDuration * 365.25 days, durationInYear * 365.25 days, true) {
+        TokenVesting(beneficiary, block.timestamp, cliffDurationInYear * 365.25 days, durationInYear * 365.25 days, true) {
     }
 }
