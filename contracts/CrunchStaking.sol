@@ -13,14 +13,16 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
 
     event YieldUpdated(uint256 yield, uint256 totalDebt);
 
-    event WithdrawEvent(
+    event Withdrawed(
         address indexed to,
         uint256 reward,
         uint256 staked,
         uint256 totalAmount
     );
 
-    event EmergencyWithdrawEvent(address indexed to, uint256 staked);
+    event EmergencyWithdrawed(address indexed to, uint256 staked);
+    
+    event Deposited(address indexed sender, uint256 amount);
 
     /**
      * The `yield` is the amount of tokens rewarded for 1 million CRUNCHs staked over a 1 day period.
@@ -34,36 +36,107 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
     uint256 public yield;
     Stakeholding.Stakeholder[] public stakeholders;
 
-    constructor(CrunchToken _crunch, uint256 _yield) HasCrunchParent(_crunch) {
+    /** @dev Initializes the contract by specifying the parent `crunch` and the initial `yield`. */
+    constructor(CrunchToken crunch, uint256 _yield) HasCrunchParent(crunch) {
         yield = _yield;
     }
 
+    /**
+     * @dev Deposit an `amount` of tokens from your account to this contract.
+     *
+     * This will start the staking with the provided amount.
+     * The implementation call {IERC20-transferFrom}, so the caller must have previously {IERC20-approve} the `amount`.
+     *
+     * Emits a {Deposited} event.
+     *
+     * Requirements:
+     *
+     * - `amount` cannot be the zero address.
+     * - `caller` must have a balance of at least `amount`.
+     */
     function deposit(uint256 amount) public {
+        require(amount != 0, "cannot deposit zero");
+
         crunch.transferFrom(_msgSender(), address(this), amount);
 
         _deposit(_msgSender(), amount);
     }
-
+  
+    /**
+     * @dev Withdraw the staked tokens with the reward.
+     *
+     * Emits a {Withdrawed} event.
+     *
+     * Requirements:
+     *
+     * - `caller` to be staking.
+     */
     function withdraw() public {
         _withdraw(_msgSender());
     }
 
+    /**
+     * @dev Force a withdraw for a speficied address.
+     *
+     * Emits a {Withdrawed} event.
+     *
+     * Requirements:
+     *
+     * - `addr` to be staking.
+     */
     function forceWithdraw(address addr) public onlyOwner {
         _withdraw(addr);
     }
 
+    /**
+     * @dev Force an emergency withdraw.
+     *
+     * This must only be called in case of an emergency.
+     * All rewards are discarded. Only initial staked amount will be transfered back!
+     *
+     * Emits a {EmergencyWithdrawed} event.
+     *
+     * Requirements:
+     *
+     * - `caller` to be staking.
+     */
     function emergencyWithdraw() public {
         _emergencyWithdraw(_msgSender());
     }
 
+    /**
+     * @dev Force an emergency withdraw for a speficied address.
+     *
+     * This must only be called in case of an emergency.
+     * All rewards are discarded. Only initial staked amount will be transfered back!
+     *
+     * Emits a {EmergencyWithdrawed} event.
+     *
+     * Requirements:
+     *
+     * - `addr` to be staking.
+     */
     function forceEmergencyWithdraw(address addr) public onlyOwner {
         _emergencyWithdraw(addr);
     }
 
+    /**
+     * @dev Update the yield.
+     *
+     * This will recompute a reward debt with the previous yield value.
+     * The debt is used to make sure that everyone will kept their rewarded token with the previous yield value.
+     *
+     * Emits a {YieldUpdated} event.
+     *
+     * Requirements:
+     *
+     * - `to` must not be the same as the yield.
+     * - `to` must be below or equal to 3000.
+     */
     function setYield(uint256 to) public onlyOwner {
         require(yield != to, "Staking: yield value must be different");
         require(
-            yield <= 3000,
+            to <= 3000,
             "Staking: yield must be below 3000/1M Token/day"
         );
 
@@ -73,6 +146,11 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
         emit YieldUpdated(yield, debt);
     }
 
+    /**
+     * @dev Destroy the contact after withdrawing everyone.
+     *
+     * If the reserve is not zero after the withdraw, the remaining will be sent back to the contract's owner.
+     */
     function destroy() public onlyOwner {
         while (stakeholders.length != 0) {
             _withdraw(stakeholders[0], 0);
@@ -81,6 +159,14 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
         _transferRemainingAndSelfDestruct();
     }
 
+    /**
+     * @dev Destroy the contact after emergency withdrawing everyone.
+     *
+     * This is only in case of an emergency.
+     * Only staked token will be transfered back.
+     *
+     * If the reserve is not zero after the withdraw, the remaining will be sent back to the contract's owner.
+     */
     function emergencyDestroy() public onlyOwner {
         while (stakeholders.length != 0) {
             _emergencyWithdraw(stakeholders[0], 0);
@@ -94,22 +180,32 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
     //     _transferRemainingAndSelfDestruct();
     // }
 
+    /** @dev Returns the sum of everyone staked amount. */
     function totalStaked() public view returns (uint256) {
         return stakeholders.computeTotalStaked();
     }
 
+    /** @dev Returns the sum of the specified `addr` staked amount. */
     function totalStakedOf(address addr) public view returns (uint256) {
         return stakeholders.get(addr).totalStaked;
     }
 
+    /** @dev Returns the computed reward of everyone. */
     function totalReward() public view returns (uint256) {
         return stakeholders.computeReward(yield);
     }
 
+    /** @dev Returns the computed reward of the specified `addr`. */
     function totalRewardOf(address addr) public view returns (uint256) {
         return stakeholders.get(addr).computeReward(yield);
     }
 
+    /** @dev Returns the number of address current staking. */
+    function stakerCount() public view returns (uint) {
+        return stakeholders.length;
+    }
+
+    /** @dev Returns whether a speficied `addr` is currently staking. */
     function isStaking(address addr) public view returns (bool) {
         (bool found, ) = stakeholders.find(addr);
 
@@ -154,7 +250,7 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
 
         crunch.transfer(stakeholder.to, totalAmount);
 
-        emit WithdrawEvent(stakeholder.to, reward, staked, totalAmount);
+        emit Withdrawed(stakeholder.to, reward, staked, totalAmount);
     }
 
     function _emergencyWithdraw(address addr) internal {
@@ -176,7 +272,7 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
 
         crunch.transfer(_msgSender(), staked);
 
-        emit EmergencyWithdrawEvent(_msgSender(), staked);
+        emit EmergencyWithdrawed(_msgSender(), staked);
     }
 
     function _transferRemainingAndSelfDestruct() internal {
