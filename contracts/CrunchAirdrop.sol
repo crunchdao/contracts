@@ -4,7 +4,7 @@ pragma solidity ^0.8.2;
 import "./HasCrunchParent.sol";
 import "./CrunchToken.sol";
 
-contract CrunchDistribute is HasCrunchParent {
+contract CrunchAirdrop is HasCrunchParent {
     constructor(CrunchToken _crunch) HasCrunchParent(_crunch) {}
 
     function distribute(address[] memory recipients, uint256[] memory values)
