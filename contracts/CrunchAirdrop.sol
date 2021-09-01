@@ -11,12 +11,17 @@ contract CrunchAirdrop is HasCrunchParent {
         public
         onlyOwner
     {
+        require(
+            recipients.length == values.length,
+            "recipients and values length differ"
+        );
+
         for (uint256 i = 0; i < recipients.length; i++) {
             crunch.transfer(recipients[i], values[i]);
         }
     }
 
     function reserve() public view returns (uint256) {
-      return crunch.balanceOf(address(this));
+        return crunch.balanceOf(address(this));
     }
 }
