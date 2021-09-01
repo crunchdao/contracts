@@ -9,6 +9,6 @@ contract CrunchTimelock is TokenTimelock {
     constructor(
         CrunchToken crunch,
         address beneficiary,
-        uint256 releaseTime
-    ) TokenTimelock(crunch, beneficiary, releaseTime) {}
+        uint256 releaseTimeInYear
+    ) TokenTimelock(crunch, beneficiary, releaseTimeInYear * 365.25 days) {}
 }
