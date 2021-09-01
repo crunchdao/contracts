@@ -14,6 +14,7 @@
     "chai-as-promised": "^7.1.1",
     "chai-bn": "^0.3.0",
     "dotenv": "^10.0.0",
+    "regenerator-runtime": "^0.13.9",
     "truffle-ledger-provider": "^1.0.3"
   },
   "devDependencies": {
