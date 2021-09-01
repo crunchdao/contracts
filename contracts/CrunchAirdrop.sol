@@ -42,11 +42,16 @@ contract CrunchAirdrop is HasCrunchParent {
      * - `reserve()` must not be zero.
      */
     function empty() public onlyOwner {
-        uint256 remaining = reserve();
+        bool success = _transferRemaining();
 
-        require(remaining != 0, "already empty");
+        require(success, "already empty");
+    }
 
-        crunch.transfer(owner(), remaining);
+    /** @dev Destroy the contract and transfer. */
+    function destroy() public onlyOwner {
+        _transferRemaining();
+
+        selfdestruct(payable(owner()));
     }
 
     /** @dev Returns the current balance of the contract. */
@@ -63,5 +68,16 @@ contract CrunchAirdrop is HasCrunchParent {
         for (uint256 index = 0; index < values.length; index++) {
             accumulator += values[index];
         }
+    }
+
+    function _transferRemaining() internal returns (bool success) {
+        uint256 remaining = reserve();
+
+        if (remaining != 0) {
+            crunch.transfer(owner(), remaining);
+            return true;
+        }
+
+        return false;
     }
 }
