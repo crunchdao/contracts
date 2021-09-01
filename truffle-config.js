@@ -26,6 +26,7 @@
 require("dotenv").config();
 
 const HDWalletProvider = require("@truffle/hdwallet-provider");
+const LedgerWalletProvider = require("truffle-ledger-provider");
 
 module.exports = {
   /**
@@ -49,6 +50,20 @@ module.exports = {
       provider: function () {
         return new HDWalletProvider(
           process.env.MNEMONIC,
+          `wss://ropsten.infura.io/ws/v3/${process.env.INFURA_PROJECT}`
+        );
+      },
+      network_id: 3,
+      websocket: true,
+      networkCheckTimeout: 1000000,
+    },
+
+    ropsten_ledger: {
+      provider: function () {
+        return new LedgerWalletProvider(
+          {
+            // https://www.npmjs.com/package/truffle-ledger-provider
+          },
           `wss://ropsten.infura.io/ws/v3/${process.env.INFURA_PROJECT}`
         );
       },

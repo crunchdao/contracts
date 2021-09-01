@@ -11,7 +11,8 @@
     "chai": "^4.3.4",
     "chai-as-promised": "^7.1.1",
     "chai-bn": "^0.3.0",
-    "dotenv": "^10.0.0"
+    "dotenv": "^10.0.0",
+    "truffle-ledger-provider": "^1.0.3"
   },
   "devDependencies": {
     "truffle-plugin-verify": "^0.5.12"
