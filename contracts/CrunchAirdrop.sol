@@ -16,8 +16,8 @@ contract CrunchAirdrop is HasCrunchParent {
             "recipients and values length differ"
         );
 
-        for (uint256 i = 0; i < recipients.length; i++) {
-            crunch.transfer(recipients[i], values[i]);
+        for (uint256 index = 0; index < recipients.length; index++) {
+            crunch.transfer(recipients[index], values[index]);
         }
     }
 
