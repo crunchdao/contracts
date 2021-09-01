@@ -15,4 +15,8 @@ contract CrunchAirdrop is HasCrunchParent {
             crunch.transfer(recipients[i], values[i]);
         }
     }
+
+    function reserve() public view returns (uint256) {
+      return crunch.balanceOf(address(this));
+    }
 }
