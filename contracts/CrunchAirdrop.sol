@@ -34,6 +34,21 @@ contract CrunchAirdrop is HasCrunchParent {
         }
     }
 
+    /**
+     * @dev Empty the contract token and transfer them to the owner.
+     *
+     * Requirements:
+     *
+     * - `reserve()` must not be zero.
+     */
+    function empty() public onlyOwner {
+        uint256 remaining = reserve();
+
+        require(remaining != 0, "already empty");
+
+        crunch.transfer(owner(), remaining);
+    }
+
     /** @dev Returns the current balance of the contract. */
     function reserve() public view returns (uint256) {
         return crunch.balanceOf(address(this));
