@@ -10,6 +10,7 @@
     "@babel/runtime": "^7.15.3",
     "@openzeppelin/contracts": "^4.3.1",
     "@truffle/hdwallet-provider": "^1.5.0",
+    "@umaprotocol/truffle-ledger-provider": "^1.0.5",
     "chai": "^4.3.4",
     "chai-as-promised": "^7.1.1",
     "chai-bn": "^0.3.0",

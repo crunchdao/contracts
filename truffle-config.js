@@ -28,7 +28,7 @@ require("dotenv").config();
 const regeneratorRuntime = require("regenerator-runtime");
 
 const HDWalletProvider = require("@truffle/hdwallet-provider");
-const LedgerWalletProvider = require("truffle-ledger-provider");
+const LedgerWalletProvider = require("@umaprotocol/truffle-ledger-provider");
 
 module.exports = {
   /**
