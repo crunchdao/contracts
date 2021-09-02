@@ -5,7 +5,7 @@ import "./HasCrunchParent.sol";
 import "./CrunchToken.sol";
 
 contract CrunchAirdrop is HasCrunchParent {
-    constructor(CrunchToken _crunch) HasCrunchParent(_crunch) {}
+    constructor(CrunchToken crunch) HasCrunchParent(crunch) {}
 
     /**
      * @dev Distribute tokens.
@@ -23,6 +23,8 @@ contract CrunchAirdrop is HasCrunchParent {
             recipients.length == values.length,
             "recipients and values length differ"
         );
+
+        require(recipients.length != 0, "must at least have one target");
 
         require(
             reserve() >= sum(values),
