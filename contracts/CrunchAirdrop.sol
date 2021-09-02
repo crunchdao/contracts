@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.2;
 
-import "./HasCrunchParent.sol";
+import "./access/HasCrunchParent.sol";
 import "./CrunchToken.sol";
 
 contract CrunchAirdrop is HasCrunchParent {

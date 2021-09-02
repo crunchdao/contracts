@@ -3,7 +3,7 @@ pragma solidity ^0.8.2;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-import "./CrunchToken.sol";
+import "../CrunchToken.sol";
 
 contract HasCrunchParent is Ownable {
     event ParentUpdated(address from, address to);

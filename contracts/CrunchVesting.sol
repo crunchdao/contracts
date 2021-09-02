@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.2;
 
-import "./HasCrunchParent.sol";
+import "./access/HasCrunchParent.sol";
 
 contract CrunchVesting is HasCrunchParent {
     event TokensReleased(uint256 amount);
