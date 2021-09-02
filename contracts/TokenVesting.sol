@@ -1,8 +1,10 @@
-pragma solidity ^0.5.0;
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
 
-import "../token/ERC20/SafeERC20.sol";
-import "../ownership/Ownable.sol";
-import "../math/SafeMath.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
 /**
  * @title TokenVesting
@@ -24,90 +26,61 @@ contract TokenVesting is Ownable {
     event TokenVestingRevoked(address token);
 
     // beneficiary of tokens after they are released
-    address private _beneficiary;
+    address public beneficiary;
 
     // Durations and timestamps are expressed in UNIX time, the same units as block.timestamp.
-    uint256 private _cliff;
-    uint256 private _start;
-    uint256 private _duration;
+    /** the cliff time of the token vesting. */
+    uint256 public cliff;
+    /** the start time of the token vesting. */
+    uint256 public start;
+    /** the duration of the token vesting. */
+    uint256 public duration;
 
-    bool private _revocable;
+    /** true if the vesting is revocable. */
+    bool public revocable;
 
-    mapping (address => uint256) private _released;
-    mapping (address => bool) private _revoked;
+    /** the amount of the token released. */
+    mapping(address => uint256) public released;
+
+    /** true if the token is revoked. */
+    mapping(address => bool) public revoked;
 
     /**
      * @dev Creates a vesting contract that vests its balance of any ERC20 token to the
      * beneficiary, gradually in a linear fashion until start + duration. By then all
      * of the balance will have vested.
-     * @param beneficiary address of the beneficiary to whom vested tokens are transferred
-     * @param cliffDuration duration in seconds of the cliff in which tokens will begin to vest
-     * @param start the time (as Unix time) at which point vesting starts
-     * @param duration duration in seconds of the period in which the tokens will vest
-     * @param revocable whether the vesting is revocable or not
+     * @param _beneficiary address of the beneficiary to whom vested tokens are transferred
+     * @param _cliffDuration duration in seconds of the cliff in which tokens will begin to vest
+     * @param _start the time (as Unix time) at which point vesting starts
+     * @param _duration duration in seconds of the period in which the tokens will vest
+     * @param _revocable whether the vesting is revocable or not
      */
-    constructor (address beneficiary, uint256 start, uint256 cliffDuration, uint256 duration, bool revocable) public {
-        require(beneficiary != address(0), "TokenVesting: beneficiary is the zero address");
-        // solhint-disable-next-line max-line-length
-        require(cliffDuration <= duration, "TokenVesting: cliff is longer than duration");
-        require(duration > 0, "TokenVesting: duration is 0");
-        // solhint-disable-next-line max-line-length
-        require(start.add(duration) > block.timestamp, "TokenVesting: final time is before current time");
+    constructor(
+        address _beneficiary,
+        uint256 _start,
+        uint256 _cliffDuration,
+        uint256 _duration,
+        bool _revocable
+    ) {
+        require(
+            _beneficiary != address(0),
+            "TokenVesting: beneficiary is the zero address"
+        );
+        require(
+            _cliffDuration <= _duration,
+            "TokenVesting: cliff is longer than duration"
+        );
+        require(_duration > 0, "TokenVesting: duration is 0");
+        require(
+            _start.add(_duration) > block.timestamp,
+            "TokenVesting: final time is before current time"
+        );
 
-        _beneficiary = beneficiary;
-        _revocable = revocable;
-        _duration = duration;
-        _cliff = start.add(cliffDuration);
-        _start = start;
-    }
-
-    /**
-     * @return the beneficiary of the tokens.
-     */
-    function beneficiary() public view returns (address) {
-        return _beneficiary;
-    }
-
-    /**
-     * @return the cliff time of the token vesting.
-     */
-    function cliff() public view returns (uint256) {
-        return _cliff;
-    }
-
-    /**
-     * @return the start time of the token vesting.
-     */
-    function start() public view returns (uint256) {
-        return _start;
-    }
-
-    /**
-     * @return the duration of the token vesting.
-     */
-    function duration() public view returns (uint256) {
-        return _duration;
-    }
-
-    /**
-     * @return true if the vesting is revocable.
-     */
-    function revocable() public view returns (bool) {
-        return _revocable;
-    }
-
-    /**
-     * @return the amount of the token released.
-     */
-    function released(address token) public view returns (uint256) {
-        return _released[token];
-    }
-
-    /**
-     * @return true if the token is revoked.
-     */
-    function revoked(address token) public view returns (bool) {
-        return _revoked[token];
+        beneficiary = _beneficiary;
+        revocable = _revocable;
+        duration = _duration;
+        cliff = _start.add(_cliffDuration);
+        start = _start;
     }
 
     /**
@@ -119,9 +92,9 @@ contract TokenVesting is Ownable {
 
         require(unreleased > 0, "TokenVesting: no tokens are due");
 
-        _released[address(token)] = _released[address(token)].add(unreleased);
+        released[address(token)] = released[address(token)].add(unreleased);
 
-        token.safeTransfer(_beneficiary, unreleased);
+        token.safeTransfer(beneficiary, unreleased);
 
         emit TokensReleased(address(token), unreleased);
     }
@@ -132,15 +105,18 @@ contract TokenVesting is Ownable {
      * @param token ERC20 token which is being vested
      */
     function revoke(IERC20 token) public onlyOwner {
-        require(_revocable, "TokenVesting: cannot revoke");
-        require(!_revoked[address(token)], "TokenVesting: token already revoked");
+        require(revocable, "TokenVesting: cannot revoke");
+        require(
+            !revoked[address(token)],
+            "TokenVesting: token already revoked"
+        );
 
         uint256 balance = token.balanceOf(address(this));
 
         uint256 unreleased = _releasableAmount(token);
         uint256 refund = balance.sub(unreleased);
 
-        _revoked[address(token)] = true;
+        revoked[address(token)] = true;
 
         token.safeTransfer(owner(), refund);
 
@@ -152,7 +128,7 @@ contract TokenVesting is Ownable {
      * @param token ERC20 token which is being vested
      */
     function _releasableAmount(IERC20 token) private view returns (uint256) {
-        return _vestedAmount(token).sub(_released[address(token)]);
+        return _vestedAmount(token).sub(released[address(token)]);
     }
 
     /**
@@ -161,14 +137,16 @@ contract TokenVesting is Ownable {
      */
     function _vestedAmount(IERC20 token) private view returns (uint256) {
         uint256 currentBalance = token.balanceOf(address(this));
-        uint256 totalBalance = currentBalance.add(_released[address(token)]);
+        uint256 totalBalance = currentBalance.add(released[address(token)]);
 
-        if (block.timestamp < _cliff) {
+        if (block.timestamp < cliff) {
             return 0;
-        } else if (block.timestamp >= _start.add(_duration) || _revoked[address(token)]) {
+        } else if (
+            block.timestamp >= start.add(duration) || revoked[address(token)]
+        ) {
             return totalBalance;
         } else {
-            return totalBalance.mul(block.timestamp.sub(_start)).div(_duration);
+            return totalBalance.mul(block.timestamp.sub(start)).div(duration);
         }
     }
 }
