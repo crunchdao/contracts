@@ -6,12 +6,14 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "./CrunchToken.sol";
 
 contract HasCrunchParent is Ownable {
-    event ParentUpdated(CrunchToken from, CrunchToken to);
+    event ParentUpdated(address from, address to);
 
     CrunchToken public crunch;
 
     constructor(CrunchToken _crunch) {
         crunch = _crunch;
+
+        emit ParentUpdated(address(0), address(crunch));
     }
 
     modifier onlyCrunchParent() {
@@ -23,9 +25,9 @@ contract HasCrunchParent is Ownable {
     }
 
     function setCrunch(CrunchToken _crunch) public onlyOwner {
-        require(crunch != _crunch, "useless to update to same crunch token");
+        require(address(crunch) != address(_crunch), "useless to update to same crunch token");
 
-        emit ParentUpdated(crunch, _crunch);
+        emit ParentUpdated(address(crunch), address(_crunch));
 
         crunch = _crunch;
     }
