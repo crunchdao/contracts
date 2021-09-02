@@ -48,6 +48,18 @@ module.exports = {
       network_id: "*", // Any network (default: none)
     },
 
+    mainnet: {
+      provider: function () {
+        return new HDWalletProvider(
+          process.env.MNEMONIC,
+          `wss://mainnet.infura.io/ws/v3/${process.env.INFURA_PROJECT}`
+        );
+      },
+      network_id: 1,
+      websocket: true,
+      networkCheckTimeout: 1000000,
+    },
+
     ropsten: {
       provider: function () {
         return new HDWalletProvider(
