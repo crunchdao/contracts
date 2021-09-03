@@ -205,6 +205,11 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
         return stakeholders.length;
     }
 
+    /** @dev Returns whether the caller is currently staking. */
+    function isStaking() public view returns (bool) {
+        return isStaking(_msgSender());
+    }
+
     /** @dev Returns whether a speficied `addr` is currently staking. */
     function isStaking(address addr) public view returns (bool) {
         (bool found, ) = stakeholders.find(addr);
@@ -223,7 +228,10 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
     }
 
     function _deposit(address from, uint256 amount) private {
+
         Stakeholding.Stakeholder storage stakeholder = stakeholders.add(from);
+        emit Deposited(stakeholder.to, amount);
+
 
         stakeholder.createStake(amount);
     }
@@ -241,6 +249,7 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
         Stakeholding.Stakeholder storage stakeholder,
         uint256 index
     ) internal {
+        address to = stakeholder.to;
         uint256 reward = stakeholder.computeReward(yield);
         uint256 staked = stakeholder.totalStaked;
 
@@ -248,9 +257,9 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
 
         uint256 totalAmount = reward + staked;
 
-        crunch.transfer(stakeholder.to, totalAmount);
+        crunch.transfer(to, totalAmount);
 
-        emit Withdrawed(stakeholder.to, reward, staked, totalAmount);
+        emit Withdrawed(to, reward, staked, totalAmount);
     }
 
     function _emergencyWithdraw(address addr) internal {
