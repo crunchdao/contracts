@@ -10,6 +10,7 @@ contract("Crunch Stacking", async (accounts) => {
   let staking;
 
   const [owner, staker1, staker2, staker3] = accounts;
+  const initialStakerBalance = 10000;
 
   beforeEach(async () => {
     const lib = await Stakeholding.new();
@@ -18,9 +19,9 @@ contract("Crunch Stacking", async (accounts) => {
     await CrunchStaking.link("Stakeholding", lib.address);
     staking = await CrunchStaking.new(crunch.address, 657);
 
-    await crunch.transfer(staker1, 10000);
-    await crunch.transfer(staker2, 10000);
-    await crunch.transfer(staker3, 10000);
+    for (const staker of [staker1, staker2, staker3]) {
+      await crunch.transfer(staker, initialStakerBalance);
+    }
   });
 
   it("deposit(uint256) : (0)", async () => {
@@ -44,6 +45,16 @@ contract("Crunch Stacking", async (accounts) => {
     //     });
     // });
     await expect(staking.deposit(100)).to.be.fulfilled;
+    await expect(staking.isStaking()).to.eventually.be.true;
+  });
+
+  it("onTokenTransfer(address, uint256, bytes) : (0x1, 0, 0x0)", async () => {
+    await expect(crunch.transferAndCall(staking.address, 0, "0x0")).to.be
+      .rejected;
+  });
+
+  it("onTokenTransfer(address, uint256, bytes) : (0x1, 100, 0x0)", async () => {
+    await expect(crunch.transferAndCall(staking.address, 100, "0x0")).to.be.fulfilled;
     await expect(staking.isStaking()).to.eventually.be.true;
   });
 
@@ -132,9 +143,8 @@ contract("Crunch Stacking", async (accounts) => {
   it("isStaking()", async () => {
     await expect(staking.isStaking()).to.eventually.be.false;
 
-    await expect(
-      crunch.transferAndCall(staking.address, 100, "0x0")
-    ).to.be.fulfilled;
+    await expect(crunch.transferAndCall(staking.address, 100, "0x0")).to.be
+      .fulfilled;
 
     await expect(staking.isStaking()).to.eventually.be.true;
 
