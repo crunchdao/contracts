@@ -55,8 +55,6 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
      * - `caller` must have a balance of at least `amount`.
      */
     function deposit(uint256 amount) public {
-        require(amount != 0, "cannot deposit zero");
-
         crunch.transferFrom(_msgSender(), address(this), amount);
 
         _deposit(_msgSender(), amount);
@@ -228,6 +226,7 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
     }
 
     function _deposit(address from, uint256 amount) private {
+        require(amount != 0, "cannot deposit zero");
 
         Stakeholding.Stakeholder storage stakeholder = stakeholders.add(from);
         emit Deposited(stakeholder.to, amount);
