@@ -54,7 +54,8 @@ contract("Crunch Stacking", async (accounts) => {
   });
 
   it("onTokenTransfer(address, uint256, bytes) : (0x1, 100, 0x0)", async () => {
-    await expect(crunch.transferAndCall(staking.address, 100, "0x0")).to.be.fulfilled;
+    await expect(crunch.transferAndCall(staking.address, 100, "0x0")).to.be
+      .fulfilled;
     await expect(staking.isStaking()).to.eventually.be.true;
   });
 
@@ -75,7 +76,88 @@ contract("Crunch Stacking", async (accounts) => {
 
     const after = await crunch.balanceOf(accounts[0]);
 
-    await expect(before.sub(after).toNumber()).to.be.equal(amount);
+    await expect(before.sub(after).toNumber()).to.be.equal(0);
+  });
+
+  it("totalStaked() : nobody", async () => {
+    await expect(staking.totalStaked()).to.eventually.be.a.bignumber.equal(
+      new BN(0)
+    );
+  });
+
+  it("totalStaked() : staking 100", async () => {
+    const amount = 100;
+
+    await crunch.transferAndCall(staking.address, amount, "0x0");
+
+    await expect(staking.totalStaked()).to.eventually.be.a.bignumber.equal(
+      new BN(amount)
+    );
+  });
+
+  it("totalStaked() : staking 100 * 2", async () => {
+    const amount = 100;
+
+    await crunch.transferAndCall(staking.address, amount, "0x0");
+    await crunch.transferAndCall(staking.address, amount, "0x0", {
+      from: staker1,
+    });
+
+    await expect(staking.totalStaked()).to.eventually.be.a.bignumber.equal(
+      new BN(amount * 2)
+    );
+
+    await expect(staking.withdraw()).to.be.fulfilled;
+
+    await expect(staking.totalStaked()).to.eventually.be.a.bignumber.equal(
+      new BN(amount)
+    );
+
+    await expect(staking.withdraw({ from: staker1 })).to.be.fulfilled;
+
+    await expect(staking.totalStaked()).to.eventually.be.a.bignumber.equal(
+      new BN(0)
+    );
+  });
+
+  it("totalStakedOf(address) : not staking", async () => {
+    await expect(staking.totalStakedOf(staker1)).to.be.rejected;
+  });
+
+  it("totalStakedOf(address) : staking 100", async () => {
+    const amount = 100;
+
+    await crunch.transferAndCall(staking.address, amount, "0x0", {
+      from: staker1,
+    });
+    await crunch.transferAndCall(staking.address, amount, "0x0", {
+      from: staker2,
+    });
+
+    await expect(
+      staking.totalStakedOf(staker1)
+    ).to.eventually.be.a.bignumber.equal(new BN(amount));
+
+    await expect(
+      staking.totalStakedOf(staker2)
+    ).to.eventually.be.a.bignumber.equal(new BN(amount));
+  });
+
+  it("totalStaked() : staking 100 * 2, same person", async () => {
+    const amount = 100;
+
+    await crunch.transferAndCall(staking.address, amount, "0x0");
+    await crunch.transferAndCall(staking.address, amount, "0x0");
+
+    await expect(staking.totalStaked()).to.eventually.be.a.bignumber.equal(
+      new BN(amount * 2)
+    );
+
+    await expect(staking.withdraw()).to.be.fulfilled;
+
+    await expect(staking.totalStaked()).to.eventually.be.a.bignumber.equal(
+      new BN(0)
+    );
   });
 
   it("stakerCount()", async () => {
