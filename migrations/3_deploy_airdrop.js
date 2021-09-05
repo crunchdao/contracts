@@ -1,5 +1,8 @@
+const CrunchToken = artifacts.require("CrunchToken");
 const CrunchAirdrop = artifacts.require("CrunchAirdrop");
 
 module.exports = async (deployer) => {
-  await deployer.deploy(CrunchAirdrop);
+  const crunch = await CrunchToken.deployed();
+
+  await deployer.deploy(CrunchAirdrop, crunch.address);
 };
