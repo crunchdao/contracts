@@ -231,7 +231,6 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
         Stakeholding.Stakeholder storage stakeholder = stakeholders.add(from);
         emit Deposited(stakeholder.to, amount);
 
-
         stakeholder.createStake(amount);
     }
 
