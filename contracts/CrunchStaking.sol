@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.2;
 
-import "./Stakeholding.sol";
 import "./erc677/IERC677Receiver.sol";
 import "./access/HasCrunchParent.sol";
 import "./CrunchToken.sol";
