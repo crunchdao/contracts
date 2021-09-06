@@ -195,6 +195,26 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
         return stakeholders.get(addr).computeReward(yield);
     }
 
+    function isReserveSufficient() public view returns (bool) {
+        return _isReserveSufficient(totalReward());
+    }
+
+    function isReserveSufficient(address addr) public view returns (bool) {
+        return _isReserveSufficient(totalRewardOf(addr));
+    }
+
+    function canWithdraw(address addr) public view returns (bool) {
+        (bool found, uint256 index) = stakeholders.find(addr);
+
+        if (found) {
+            Stakeholding.Stakeholder storage stakeholder = stakeholders[index];
+
+            return _isReserveSufficient(stakeholder.computeReward(yield));
+        }
+
+        return false;
+    }
+
     /** @dev Returns the number of address current staking. */
     function stakerCount() public view returns (uint256) {
         return stakeholders.length;
@@ -267,6 +287,11 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
         uint256 reward = stakeholder.computeReward(yield);
         uint256 staked = stakeholder.totalStaked;
 
+        require(
+            _isReserveSufficient(reward),
+            "Staking: the reserve does not have enough token"
+        );
+
         stakeholders.removeAt(index);
 
         uint256 totalAmount = reward + staked;
@@ -296,6 +321,10 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
         crunch.transfer(_msgSender(), staked);
 
         emit EmergencyWithdrawed(_msgSender(), staked);
+    }
+
+    function _isReserveSufficient(uint256 reward) private view returns (bool) {
+        return reserve() >= reward;
     }
 
     function _transferRemainingAndSelfDestruct() internal {
