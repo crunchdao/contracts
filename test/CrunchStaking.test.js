@@ -152,7 +152,7 @@ contract("Crunch Stacking", async (accounts) => {
   });
 
   it("totalStakedOf(address) : not staking", async () => {
-    await expect(staking.totalStakedOf(staker1)).to.be.rejected;
+    await expect(staking.totalStakedOf(staker1)).to.eventually.be.a.bignumber.equal(new BN(0));
   });
 
   it("totalStakedOf(address) : staking 100", async () => {
