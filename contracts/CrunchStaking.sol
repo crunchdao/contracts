@@ -133,7 +133,7 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
      */
     function setYield(uint256 to) public onlyOwner {
         require(yield != to, "Staking: yield value must be different");
-        require(to <= 3000, "Staking: yield must be below 3000/1M Token/day");
+        require(to <= 3000, "Staking: yield must be below 3000/1M token/day");
 
         uint256 debt = stakeholders.updateDebts(yield);
         yield = to;
