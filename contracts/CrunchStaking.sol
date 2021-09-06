@@ -21,7 +21,7 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
     );
 
     event EmergencyWithdrawed(address indexed to, uint256 staked);
-    
+
     event Deposited(address indexed sender, uint256 amount);
 
     /**
@@ -59,7 +59,7 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
 
         _deposit(_msgSender(), amount);
     }
-  
+
     /**
      * @dev Withdraw the staked tokens with the reward.
      *
@@ -133,10 +133,7 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
      */
     function setYield(uint256 to) public onlyOwner {
         require(yield != to, "Staking: yield value must be different");
-        require(
-            to <= 3000,
-            "Staking: yield must be below 3000/1M Token/day"
-        );
+        require(to <= 3000, "Staking: yield must be below 3000/1M Token/day");
 
         uint256 debt = stakeholders.updateDebts(yield);
         yield = to;
@@ -199,7 +196,7 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
     }
 
     /** @dev Returns the number of address current staking. */
-    function stakerCount() public view returns (uint) {
+    function stakerCount() public view returns (uint256) {
         return stakeholders.length;
     }
 
@@ -213,6 +210,25 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
         (bool found, ) = stakeholders.find(addr);
 
         return found;
+    }
+
+    /** @dev Returns the current reserve for rewards. */
+    function reserve() public view returns (uint256) {
+        uint256 balance = contractBalance();
+        uint256 staked = totalStaked();
+
+        if (staked > balance) {
+            revert(
+                "Staking: the balance has less CRUNCH than the total staked"
+            );
+        }
+
+        return balance - staked;
+    }
+
+    /** @dev Returns the contract CRUNCH balance. */
+    function contractBalance() public view returns (uint256) {
+        return crunch.balanceOf(address(this));
     }
 
     function onTokenTransfer(
