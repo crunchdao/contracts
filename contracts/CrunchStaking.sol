@@ -314,13 +314,14 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
         Stakeholding.Stakeholder storage stakeholder,
         uint256 index
     ) internal {
+        address to = stakeholder.to;
         uint256 staked = stakeholder.totalStaked;
 
         stakeholders.removeAt(index);
 
-        crunch.transfer(_msgSender(), staked);
+        crunch.transfer(to, staked);
 
-        emit EmergencyWithdrawed(_msgSender(), staked);
+        emit EmergencyWithdrawed(to, staked);
     }
 
     function _isReserveSufficient(uint256 reward) private view returns (bool) {
