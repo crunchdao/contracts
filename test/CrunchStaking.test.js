@@ -1,4 +1,5 @@
 const advance = require("./helper/advance");
+const time = require("./helper/time");
 const { expect, BN } = require("./helper/chai");
 
 const CrunchToken = artifacts.require("CrunchToken");
@@ -77,6 +78,36 @@ contract("Crunch Stacking", async (accounts) => {
     const after = await crunch.balanceOf(accounts[0]);
 
     await expect(before.sub(after).toNumber()).to.be.equal(0);
+  });
+
+  it("withdraw() : staking 100, no reserve", async () => {
+    const amount = 100;
+
+    await crunch.transferAndCall(staking.address, amount, "0x0");
+
+    await advance.timeAndBlock(time.oneYear);
+
+    await expect(staking.withdraw()).to.be.rejected;
+  });
+
+  it("withdraw() : staking 100, with reserve", async () => {
+    const amount = 100;
+    const reserve = 1000;
+
+    await crunch.transferAndCall(staking.address, amount, "0x0");
+
+    await advance.timeAndBlock(time.oneYear);
+
+    await crunch.transfer(staking.address, reserve /* not testing the value */);
+
+    await expect(staking.contractBalance()).to.eventually.be.a.bignumber.equal(
+      new BN(reserve + amount)
+    );
+    await expect(staking.reserve()).to.eventually.be.a.bignumber.equal(
+      new BN(reserve)
+    );
+
+    await expect(staking.withdraw()).to.be.fulfilled;
   });
 
   it("totalStaked() : nobody", async () => {
