@@ -7,12 +7,6 @@ import "./access/HasCrunchParent.sol";
 import "./CrunchToken.sol";
 
 contract CrunchStaking is HasCrunchParent, IERC677Receiver {
-    using Stakeholding for Stakeholding.Stakeholder[];
-    using Stakeholding for Stakeholding.Stakeholder;
-    using Stakeholding for Stakeholding.Stake;
-
-    event YieldUpdated(uint256 yield, uint256 totalDebt);
-
     event Withdrawed(
         address indexed to,
         uint256 reward,
@@ -21,20 +15,25 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
     );
 
     event EmergencyWithdrawed(address indexed to, uint256 staked);
-
     event Deposited(address indexed sender, uint256 amount);
+    event YieldUpdated(uint256 yield, uint256 totalDebt);
 
-    /**
-     * The `yield` is the amount of tokens rewarded for 1 million CRUNCHs staked over a 1 day period.
-     *
-     * e.g.:
-     *  to find the yield for an APR of 24%:
-     *    0,24 * 1.000.000 = 240.000    <- tokens rewarded per year
-     *    240.000 / 365,25 ~= 657       <- tokens rewarded per day
-     *    --> the yield should be 657 for a 24% APR.
-     */
+    struct Holder {
+        uint256 index;
+        uint256 totalStaked;
+        uint256 rewardDebt;
+        Stake[] stakes;
+    }
+
+    struct Stake {
+        uint256 amount;
+        uint256 start;
+    }
+
     uint256 public yield;
-    Stakeholding.Stakeholder[] public stakeholders;
+    address[] public addresses;
+    mapping(address => Holder) public holders;
+    uint256 public totalStaked;
 
     /** @dev Initializes the contract by specifying the parent `crunch` and the initial `yield`. */
     constructor(CrunchToken crunch, uint256 _yield) HasCrunchParent(crunch) {
@@ -73,17 +72,65 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
         _withdraw(_msgSender());
     }
 
-    /**
-     * @dev Force a withdraw for a speficied address.
-     *
-     * Emits a {Withdrawed} event.
-     *
-     * Requirements:
-     *
-     * - `addr` to be staking.
-     */
-    function forceWithdraw(address addr) public onlyOwner {
-        _withdraw(addr);
+    /** @dev Returns the current reserve for rewards. */
+    function reserve() public view returns (uint256) {
+        uint256 balance = contractBalance();
+
+        if (totalStaked > balance) {
+            revert(
+                "Staking: the balance has less CRUNCH than the total staked"
+            );
+        }
+
+        return balance - totalStaked;
+    }
+
+    function isStaking() public view returns (bool) {
+        return isStaking(_msgSender());
+    }
+
+    function isStaking(address addr) public view returns (bool) {
+        return _isStaking(holders[addr]);
+    }
+
+    /** @dev Returns the contract CRUNCH balance. */
+    function contractBalance() public view returns (uint256) {
+        return crunch.balanceOf(address(this));
+    }
+    
+    /** @dev Returns the sum of the specified `addr` staked amount. */
+    function totalStakedOf(address addr) public view returns (uint256) {
+        return holders[addr].totalStaked;
+    }
+
+    /** @dev Returns the computed reward of everyone. */
+    function totalReward() public view returns (uint256 total) {
+        uint256 length = addresses.length;
+        for (uint256 index = 0; index < length; index++) {
+            address addr = addresses[index];
+
+            total += totalRewardOf(addr);
+        }
+    }
+
+    /** @dev Returns the computed reward of the specified `addr`. */
+    function totalRewardOf(address addr) public view returns (uint256) {
+        Holder storage holder = holders[addr];
+
+        return _computeRewardOf(holder);
+    }
+
+    function isReserveSufficient() public view returns (bool) {
+        return _isReserveSufficient(totalReward());
+    }
+
+    function isReserveSufficientFor(address addr) public view returns (bool) {
+        return _isReserveSufficient(totalRewardOf(addr));
+    }
+
+    /** @dev Returns the number of address current staking. */
+    function stakerCount() public view returns (uint256) {
+        return addresses.length;
     }
 
     /**
@@ -103,22 +150,6 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
     }
 
     /**
-     * @dev Force an emergency withdraw for a speficied address.
-     *
-     * This must only be called in case of an emergency.
-     * All rewards are discarded. Only initial staked amount will be transfered back!
-     *
-     * Emits a {EmergencyWithdrawed} event.
-     *
-     * Requirements:
-     *
-     * - `addr` to be staking.
-     */
-    function forceEmergencyWithdraw(address addr) public onlyOwner {
-        _emergencyWithdraw(addr);
-    }
-
-    /**
      * @dev Update the yield.
      *
      * This will recompute a reward debt with the previous yield value.
@@ -135,7 +166,7 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
         require(yield != to, "Staking: yield value must be different");
         require(to <= 3000, "Staking: yield must be below 3000/1M token/day");
 
-        uint256 debt = stakeholders.updateDebts(yield);
+        uint256 debt = _updateDebts();
         yield = to;
 
         emit YieldUpdated(yield, debt);
@@ -147,110 +178,42 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
      * If the reserve is not zero after the withdraw, the remaining will be sent back to the contract's owner.
      */
     function destroy() public onlyOwner {
-        while (stakeholders.length != 0) {
-            _withdraw(stakeholders[0], 0);
+        uint256 usable = reserve();
+
+        uint256 length = addresses.length;
+        for (uint256 index = 0; index < length; index++) {
+            address addr = addresses[index];
+            Holder storage holder = holders[addr];
+
+            uint256 reward = _computeRewardOf(holder);
+
+            require(usable >= reward, "Staking: reserve does not have enough");
+
+            uint256 total = holder.totalStaked + reward;
+            crunch.transfer(addr, total);
         }
 
         _transferRemainingAndSelfDestruct();
     }
 
     /**
-     * @dev Destroy the contact after emergency withdrawing everyone.
-     *
-     * This is only in case of an emergency.
-     * Only staked token will be transfered back.
+     * @dev Destroy the contact after withdrawing everyone.
      *
      * If the reserve is not zero after the withdraw, the remaining will be sent back to the contract's owner.
      */
     function emergencyDestroy() public onlyOwner {
-        while (stakeholders.length != 0) {
-            _emergencyWithdraw(stakeholders[0], 0);
+        uint256 length = addresses.length;
+        for (uint256 index = 0; index < length; index++) {
+            address addr = addresses[index];
+            Holder storage holder = holders[addr];
+
+            crunch.transfer(addr, holder.totalStaked);
         }
 
         _transferRemainingAndSelfDestruct();
     }
 
-    // TODO: This need to be discussed further as this can break trust between owner and stakers.
-    // function criticalDestroy() public onlyOwner {
-    //     _transferRemainingAndSelfDestruct();
-    // }
-
-    /** @dev Returns the sum of everyone staked amount. */
-    function totalStaked() public view returns (uint256) {
-        return stakeholders.computeTotalStaked();
-    }
-
-    /** @dev Returns the sum of the specified `addr` staked amount. */
-    function totalStakedOf(address addr) public view returns (uint256) {
-        return stakeholders.get(addr).totalStaked;
-    }
-
-    /** @dev Returns the computed reward of everyone. */
-    function totalReward() public view returns (uint256) {
-        return stakeholders.computeReward(yield);
-    }
-
-    /** @dev Returns the computed reward of the specified `addr`. */
-    function totalRewardOf(address addr) public view returns (uint256) {
-        return stakeholders.get(addr).computeReward(yield);
-    }
-
-    function isReserveSufficient() public view returns (bool) {
-        return _isReserveSufficient(totalReward());
-    }
-
-    function isReserveSufficient(address addr) public view returns (bool) {
-        return _isReserveSufficient(totalRewardOf(addr));
-    }
-
-    function canWithdraw(address addr) public view returns (bool) {
-        (bool found, uint256 index) = stakeholders.find(addr);
-
-        if (found) {
-            Stakeholding.Stakeholder storage stakeholder = stakeholders[index];
-
-            return _isReserveSufficient(stakeholder.computeReward(yield));
-        }
-
-        return false;
-    }
-
-    /** @dev Returns the number of address current staking. */
-    function stakerCount() public view returns (uint256) {
-        return stakeholders.length;
-    }
-
-    /** @dev Returns whether the caller is currently staking. */
-    function isStaking() public view returns (bool) {
-        return isStaking(_msgSender());
-    }
-
-    /** @dev Returns whether a speficied `addr` is currently staking. */
-    function isStaking(address addr) public view returns (bool) {
-        (bool found, ) = stakeholders.find(addr);
-
-        return found;
-    }
-
-    /** @dev Returns the current reserve for rewards. */
-    function reserve() public view returns (uint256) {
-        uint256 balance = contractBalance();
-        uint256 staked = totalStaked();
-
-        if (staked > balance) {
-            revert(
-                "Staking: the balance has less CRUNCH than the total staked"
-            );
-        }
-
-        return balance - staked;
-    }
-
-    /** @dev Returns the contract CRUNCH balance. */
-    function contractBalance() public view returns (uint256) {
-        return crunch.balanceOf(address(this));
-    }
-
+    /** @dev Internal function called when the {IERC677-transferAndCall} is used. */
     function onTokenTransfer(
         address sender,
         uint256 value,
@@ -261,75 +224,133 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
         _deposit(sender, value);
     }
 
-    function _deposit(address from, uint256 amount) private {
+    function _deposit(address from, uint256 amount) internal {
         require(amount != 0, "cannot deposit zero");
 
-        Stakeholding.Stakeholder storage stakeholder = stakeholders.add(from);
-        emit Deposited(stakeholder.to, amount);
+        Holder storage holder = holders[from];
 
-        stakeholder.createStake(amount);
+        if (!_isStaking(holder)) {
+            holder.index = addresses.length;
+            addresses.push(from);
+        }
+
+        holder.totalStaked += amount;
+        holder.stakes.push(Stake({amount: amount, start: block.timestamp}));
+
+        totalStaked += amount;
+
+        emit Deposited(from, amount);
     }
 
     function _withdraw(address addr) internal {
-        (
-            Stakeholding.Stakeholder storage stakeholder,
-            uint256 index
-        ) = stakeholders.getWithIndex(addr);
+        Holder storage holder = holders[addr];
 
-        _withdraw(stakeholder, index);
-    }
+        require(_isStaking(holder), "Staking: no stakes");
 
-    function _withdraw(
-        Stakeholding.Stakeholder storage stakeholder,
-        uint256 index
-    ) internal {
-        address to = stakeholder.to;
-        uint256 reward = stakeholder.computeReward(yield);
-        uint256 staked = stakeholder.totalStaked;
+        uint256 reward = _computeRewardOf(holder);
 
         require(
             _isReserveSufficient(reward),
             "Staking: the reserve does not have enough token"
         );
 
-        stakeholders.removeAt(index);
+        uint256 staked = holder.totalStaked;
+        uint256 total = staked + reward;
+        crunch.transfer(addr, total);
 
-        uint256 totalAmount = reward + staked;
+        totalStaked -= staked;
 
-        crunch.transfer(to, totalAmount);
+        delete holders[addr];
+        _deleteAddress(holder.index);
 
-        emit Withdrawed(to, reward, staked, totalAmount);
+        emit Withdrawed(addr, reward, staked, total);
     }
 
     function _emergencyWithdraw(address addr) internal {
-        (
-            Stakeholding.Stakeholder storage stakeholder,
-            uint256 index
-        ) = stakeholders.getWithIndex(addr);
+        Holder storage holder = holders[addr];
 
-        _emergencyWithdraw(stakeholder, index);
-    }
+        require(_isStaking(holder), "Staking: no stakes");
 
-    function _emergencyWithdraw(
-        Stakeholding.Stakeholder storage stakeholder,
-        uint256 index
-    ) internal {
-        address to = stakeholder.to;
-        uint256 staked = stakeholder.totalStaked;
+        uint256 staked = holder.totalStaked;
+        crunch.transfer(addr, staked);
 
-        stakeholders.removeAt(index);
+        totalStaked -= staked;
 
-        crunch.transfer(to, staked);
+        delete holders[addr];
+        _deleteAddress(holder.index);
 
-        emit EmergencyWithdrawed(to, staked);
+        emit EmergencyWithdrawed(addr, staked);
     }
 
     function _isReserveSufficient(uint256 reward) private view returns (bool) {
         return reserve() >= reward;
     }
 
+    function _isStaking(Holder storage holder) internal view returns (bool) {
+        return holder.stakes.length != 0;
+    }
+
+    function _updateDebts() internal returns (uint256 total) {
+        uint256 length = addresses.length;
+        for (uint256 index = 0; index < length; index++) {
+            address addr = addresses[index];
+            Holder storage holder = holders[addr];
+
+            uint256 debt = _computeRewardOf(holder);
+
+            holder.rewardDebt += debt;
+
+            total += debt;
+        }
+    }
+
+    function _computeTotalReward() internal view returns (uint256 total) {
+        uint256 length = addresses.length;
+        for (uint256 index = 0; index < length; index++) {
+            address addr = addresses[index];
+            Holder storage holder = holders[addr];
+
+            total += _computeRewardOf(holder);
+        }
+    }
+
+    function _computeRewardOf(Holder storage holder)
+        internal
+        view
+        returns (uint256 total)
+    {
+        uint256 length = holder.stakes.length;
+        for (uint256 index = 0; index < length; index++) {
+            Stake storage stake = holder.stakes[index];
+
+            total += _computeStakeReward(stake);
+        }
+    }
+
+    function _computeStakeReward(Stake storage stake)
+        internal
+        view
+        returns (uint256)
+    {
+        uint256 numberOfDays = ((block.timestamp - stake.start) / 1 days);
+
+        return (stake.amount * numberOfDays * yield) / 1_000_000;
+    }
+
+    function _deleteAddress(uint256 index) internal {
+        delete addresses[index];
+
+        uint256 length = addresses.length;
+        if (length != 0) {
+            address addr = addresses[length - 1];
+            holders[addr].index = index;
+
+            addresses.pop();
+        }
+    }
+
     function _transferRemainingAndSelfDestruct() internal {
-        uint256 remaining = crunch.balanceOf(address(this));
+        uint256 remaining = contractBalance();
         if (remaining != 0) {
             crunch.transfer(owner(), remaining);
         }
