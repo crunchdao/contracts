@@ -248,4 +248,56 @@ contract("Crunch Stacking", async (accounts) => {
 
     await expect(staking.isStaking(staker1)).to.eventually.be.false;
   });
+
+  it("reserve()", async () => {
+    const amount = 100;
+
+    await expect(staking.reserve()).to.eventually.be.a.bignumber.equal(
+      new BN(0)
+    );
+
+    await crunch.transfer(staking.address, amount);
+
+    await expect(staking.reserve()).to.eventually.be.a.bignumber.equal(
+      new BN(amount)
+    );
+
+    await crunch.transferAndCall(staking.address, amount, "0x0");
+
+    await expect(staking.reserve()).to.eventually.be.a.bignumber.equal(
+      new BN(amount)
+    );
+
+    await staking.withdraw();
+
+    await expect(staking.reserve()).to.eventually.be.a.bignumber.equal(
+      new BN(amount)
+    );
+  });
+
+  it("contractBalance()", async () => {
+    const amount = 100;
+
+    await expect(staking.contractBalance()).to.eventually.be.a.bignumber.equal(
+      new BN(0)
+    );
+
+    await crunch.transfer(staking.address, amount);
+
+    await expect(staking.contractBalance()).to.eventually.be.a.bignumber.equal(
+      new BN(amount)
+    );
+
+    await crunch.transferAndCall(staking.address, amount, "0x0");
+
+    await expect(staking.contractBalance()).to.eventually.be.a.bignumber.equal(
+      new BN(amount * 2)
+    );
+
+    await staking.withdraw();
+
+    await expect(staking.contractBalance()).to.eventually.be.a.bignumber.equal(
+      new BN(amount)
+    );
+  });
 });
