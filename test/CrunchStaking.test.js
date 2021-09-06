@@ -331,4 +331,52 @@ contract("Crunch Stacking", async (accounts) => {
       new BN(amount)
     );
   });
+
+  it("destroy()", async () => {
+    const reserve = 100;
+
+    const before = await crunch.balanceOf(owner);
+
+    await crunch.transfer(staking.address, reserve);
+
+    await expect(staking.reserve()).to.eventually.be.a.bignumber.equal(
+      new BN(reserve)
+    );
+
+    await expect(staking.destroy()).to.be.fulfilled;
+    await expect(staking.contractBalance()).to.be.rejected; /* since destroyed */
+
+    await expect(crunch.balanceOf(owner)).to.eventually.be.a.bignumber.equal(before);
+  });
+
+  it("destroy() : not enough reserve", async () => {
+    const amount = 10000;
+    const reserve = 10;
+
+    await crunch.transferAndCall(staking.address, amount, "0x0");
+    await crunch.transfer(staking.address, reserve);
+
+    await advance.timeAndBlock(time.oneYear);
+
+    await expect(staking.destroy()).to.be.rejected;
+  });
+
+  it("destroy() : enough reserve", async () => {
+    const amount = 10000;
+    const reserve = 10000;
+
+    const stakerBefore = await crunch.balanceOf(staker1);
+    const owerBefore = await crunch.balanceOf(owner);
+
+    await crunch.transferAndCall(staking.address, amount, "0x0", { from: staker1 });
+    await crunch.transfer(staking.address, reserve);
+
+    await advance.timeAndBlock(time.oneYear);
+
+    await expect(staking.destroy()).to.be.fulfilled;
+    await expect(staking.contractBalance()).to.be.rejected; /* since destroyed */
+
+    await expect(crunch.balanceOf(staker1)).to.eventually.be.a.bignumber.greaterThan(stakerBefore);
+    await expect(crunch.balanceOf(owner)).to.eventually.be.a.bignumber.lessThan(owerBefore);
+  });
 });
