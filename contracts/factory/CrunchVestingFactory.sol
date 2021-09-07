@@ -4,6 +4,8 @@ pragma solidity ^0.8.2;
 import "../CrunchVesting.sol";
 
 contract CrunchVestingFactory is HasCrunchParent {
+    event Created(CrunchVesting indexed vesting);
+
     uint256 public constant oneYear = 365.25 days;
 
     constructor(CrunchToken crunch) HasCrunchParent(crunch) {}
@@ -12,8 +14,15 @@ contract CrunchVestingFactory is HasCrunchParent {
         address beneficiary,
         uint256 cliffDuration,
         uint256 duration
-    ) public returns (CrunchVesting) {
-        return new CrunchVesting(crunch, beneficiary, cliffDuration, duration);
+    ) public returns (CrunchVesting vesting) {
+        vesting = new CrunchVesting(
+            crunch,
+            beneficiary,
+            cliffDuration,
+            duration
+        );
+
+        emit Created(vesting);
     }
 
     function createSimple(address beneficiary) public returns (CrunchVesting) {
