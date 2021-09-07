@@ -25,6 +25,7 @@ contract CrunchVesting is HasCrunchParent {
 
     constructor(
         CrunchToken crunch,
+        address _overrideOwner,
         address _beneficiary,
         uint256 _cliffDuration,
         uint256 _duration
@@ -43,6 +44,10 @@ contract CrunchVesting is HasCrunchParent {
         start = block.timestamp;
         cliff = start + _cliffDuration;
         duration = _duration;
+
+        if (_overrideOwner != address(0)) {
+            transferOwnership(_overrideOwner);
+        }
     }
 
     /** @notice Transfers vested tokens to beneficiary. */
