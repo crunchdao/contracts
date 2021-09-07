@@ -14,7 +14,7 @@ contract CrunchVestingFactory is HasCrunchParent {
         address beneficiary,
         uint256 cliffDuration,
         uint256 duration
-    ) public returns (CrunchVesting vesting) {
+    ) public onlyOwner returns (CrunchVesting vesting) {
         vesting = new CrunchVesting(
             crunch,
             beneficiary,
@@ -25,7 +25,11 @@ contract CrunchVestingFactory is HasCrunchParent {
         emit Created(vesting);
     }
 
-    function createSimple(address beneficiary) public returns (CrunchVesting) {
+    function createSimple(address beneficiary)
+        public
+        onlyOwner
+        returns (CrunchVesting)
+    {
         return create(beneficiary, oneYear, oneYear * 4);
     }
 }
