@@ -17,6 +17,7 @@ contract CrunchVestingFactory is HasCrunchParent {
     ) public onlyOwner returns (CrunchVesting vesting) {
         vesting = new CrunchVesting(
             crunch,
+            owner(),
             beneficiary,
             cliffDuration,
             duration
@@ -31,5 +32,13 @@ contract CrunchVestingFactory is HasCrunchParent {
         returns (CrunchVesting)
     {
         return create(beneficiary, oneYear, oneYear * 4);
+    }
+
+    function transferToOwner() public onlyOwner {
+      uint256 balance = crunch.balanceOf(address(this));
+
+      if (balance != 0) {
+        crunch.transfer(owner(), balance);
+      }
     }
 }
