@@ -48,7 +48,9 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
     uint256 public totalStaked;
 
     /** @dev Initializes the contract by specifying the parent `crunch` and the initial `rewardPerDay`. */
-    constructor(CrunchToken crunch, uint256 _rewardPerDay) HasCrunchParent(crunch) {
+    constructor(CrunchToken crunch, uint256 _rewardPerDay)
+        HasCrunchParent(crunch)
+    {
         rewardPerDay = _rewardPerDay;
     }
 
@@ -218,8 +220,14 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
      * @param to new reward per day value.
      */
     function setRewardPerDay(uint256 to) public onlyOwner {
-        require(rewardPerDay != to, "Staking: reward per day value must be different");
-        require(to <= 3000, "Staking: reward per day must be below 3000/1M token/day");
+        require(
+            rewardPerDay != to,
+            "Staking: reward per day value must be different"
+        );
+        require(
+            to <= 15000,
+            "Staking: reward per day must be below 15000/1M token/day"
+        );
 
         uint256 debt = _updateDebts();
         rewardPerDay = to;
@@ -240,10 +248,7 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
             address addr = addresses[index];
             Holder storage holder = holders[addr];
 
-            uint256 reward = _computeRewardOf(
-                holder,
-                true /* include debt */
-            );
+            uint256 reward = _computeRewardOf(holder);
 
             require(usable >= reward, "Staking: reserve does not have enough");
 
@@ -317,10 +322,7 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
 
         require(_isStaking(holder), "Staking: no stakes");
 
-        uint256 reward = _computeRewardOf(
-            holder,
-            true /* include debt */
-        );
+        uint256 reward = _computeRewardOf(holder);
 
         require(
             _isReserveSufficient(reward),
@@ -389,14 +391,25 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
             address addr = addresses[index];
             Holder storage holder = holders[addr];
 
-            uint256 debt = _computeRewardOf(
-                holder,
-                false /* do not include debt */
-            );
+            uint256 debt = _updateDebtsOf(holder);
 
             holder.rewardDebt += debt;
 
             total += debt;
+        }
+    }
+
+    function _updateDebtsOf(Holder storage holder)
+        internal
+        returns (uint256 total)
+    {
+        uint256 length = holder.stakes.length;
+        for (uint256 index = 0; index < length; index++) {
+            Stake storage stake = holder.stakes[index];
+
+            total += _computeStakeReward(stake);
+
+            stake.start = block.timestamp;
         }
     }
 
@@ -411,10 +424,7 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
             address addr = addresses[index];
             Holder storage holder = holders[addr];
 
-            total += _computeRewardOf(
-                holder,
-                true /* include debt */
-            );
+            total += _computeRewardOf(holder);
         }
     }
 
@@ -422,10 +432,9 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
      * Compute all stakes reward for an holder.
      *
      * @param holder the holder struct.
-     * @param includeDebt if the debt should be included in the total.
-     * @return total total reward for the holder.
+     * @return total total reward for the holder (including the debt).
      */
-    function _computeRewardOf(Holder storage holder, bool includeDebt)
+    function _computeRewardOf(Holder storage holder)
         internal
         view
         returns (uint256 total)
@@ -437,9 +446,7 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
             total += _computeStakeReward(stake);
         }
 
-        if (includeDebt) {
-            total += holder.rewardDebt;
-        }
+        total += holder.rewardDebt;
     }
 
     /**
