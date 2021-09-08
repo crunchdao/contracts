@@ -4,7 +4,6 @@ const { expect, BN } = require("./helper/chai");
 
 const CrunchToken = artifacts.require("CrunchToken");
 const CrunchStaking = artifacts.require("CrunchStaking");
-const Stakeholding = artifacts.require("Stakeholding");
 
 contract("Crunch Stacking", async (accounts) => {
   let crunch;
@@ -14,10 +13,7 @@ contract("Crunch Stacking", async (accounts) => {
   const initialStakerBalance = 10000;
 
   beforeEach(async () => {
-    const lib = await Stakeholding.new();
-
     crunch = await CrunchToken.new();
-    await CrunchStaking.link("Stakeholding", lib.address);
     staking = await CrunchStaking.new(crunch.address, 657);
 
     for (const staker of [staker1, staker2, staker3]) {
