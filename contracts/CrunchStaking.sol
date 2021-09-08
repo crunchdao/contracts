@@ -206,7 +206,7 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
      * Update the reward per day.
      *
      * This will recompute a reward debt with the previous reward per day value.
-     * The debt is used to make sure that everyone will kept their rewarded token with the previous reward per day value.
+     * The debt is used to make sure that everyone will keep their rewarded tokens using the previous reward per day value for the calculation.
      *
      * Emits a {RewardPerDayUpdated} event.
      *
