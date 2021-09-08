@@ -3,11 +3,11 @@ pragma solidity ^0.8.2;
 
 import "./access/HasCrunchParent.sol";
 
-contract CrunchVesting is HasCrunchParent {
+contract Vesting is HasCrunchParent {
     event TokensReleased(uint256 amount);
     event TokenVestingRevoked();
 
-    // beneficiary of tokens after they are released
+    /* beneficiary of tokens after they are released. */
     address public beneficiary;
 
     /** the start time of the token vesting. */
@@ -32,13 +32,13 @@ contract CrunchVesting is HasCrunchParent {
     ) HasCrunchParent(crunch) {
         require(
             _beneficiary != address(0),
-            "CrunchVesting: beneficiary is the zero address"
+            "Vesting: beneficiary is the zero address"
         );
         require(
             _cliffDuration <= _duration,
-            "CrunchVesting: cliff is longer than duration"
+            "Vesting: cliff is longer than duration"
         );
-        require(_duration > 0, "CrunchVesting: duration is 0");
+        require(_duration > 0, "Vesting: duration is 0");
 
         beneficiary = _beneficiary;
         start = block.timestamp;
@@ -54,7 +54,7 @@ contract CrunchVesting is HasCrunchParent {
     function release() public {
         uint256 unreleased = releasableAmount();
 
-        require(unreleased > 0, "CrunchVesting: no tokens are due");
+        require(unreleased > 0, "Vesting: no tokens are due");
 
         released += unreleased;
 
@@ -65,7 +65,7 @@ contract CrunchVesting is HasCrunchParent {
 
     /** @notice Allows the owner to revoke the vesting. Tokens already vested remain in the contract, the rest are returned to the owner. */
     function revoke() public onlyOwner {
-        require(!revoked, "CrunchVesting: token already revoked");
+        require(!revoked, "Vesting: token already revoked");
 
         uint256 balance = crunch.balanceOf(address(this));
 
