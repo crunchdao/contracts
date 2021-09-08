@@ -448,15 +448,6 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
         return (stake.amount * numberOfDays * rewardPerDay) / 1_000_000;
     }
 
-    event IndexUpdated(
-        uint256 fromIndex,
-        uint256 lastIndex,
-        address addr,
-        uint256 previousIndex,
-        address previousAddr,
-        address newAddrAtIndex
-    );
-
     /**
      * Delete an address from the `addresses` array.
      *
