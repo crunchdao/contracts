@@ -148,11 +148,20 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
     function totalRewardOf(address addr) public view returns (uint256) {
         Holder storage holder = holders[addr];
 
-        return
-            _computeRewardOf(
-                holder,
-                true /* include debt */
-            );
+        return _computeRewardOf(holder);
+    }
+
+    function totalRewardDebt() public view returns (uint256 total) {
+        uint256 length = addresses.length;
+        for (uint256 index = 0; index < length; index++) {
+            address addr = addresses[index];
+
+            total += totalRewardDebtOf(addr);
+        }
+    }
+
+    function totalRewardDebtOf(address addr) public view returns (uint256) {
+        return holders[addr].rewardDebt;
     }
 
     /**
