@@ -48,11 +48,13 @@ contract CrunchVestingFactory is HasCrunchParent {
         return create(beneficiary, oneYear, oneYear * 4);
     }
 
-    function transferToOwner() public onlyOwner {
-      uint256 balance = crunch.balanceOf(address(this));
+    function transferToOwner() public onlyOwner returns (uint256 balance) {
+        balance = crunch.balanceOf(address(this));
 
-      if (balance != 0) {
+        if (balance == 0) {
+            revert("Vesting Factory: no token are in the factory");
+        }
+
         crunch.transfer(owner(), balance);
-      }
     }
 }
