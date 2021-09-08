@@ -327,8 +327,8 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
 
         totalStaked -= staked;
 
-        delete holders[addr];
         _deleteAddress(holder.index);
+        delete holders[addr];
 
         emit Withdrawed(addr, reward, staked, total);
     }
@@ -343,8 +343,8 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
 
         totalStaked -= staked;
 
-        delete holders[addr];
         _deleteAddress(holder.index);
+        delete holders[addr];
 
         emit EmergencyWithdrawed(addr, staked);
     }
