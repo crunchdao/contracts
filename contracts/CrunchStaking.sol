@@ -411,7 +411,7 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
     /**
      * Compute all of stakes reward for an holder.
      *
-     * @param holder holder struct.
+     * @param holder the holder struct.
      * @param includeDebt if the debt should be included in the total.
      * @return total total reward for the holder.
      */
@@ -435,7 +435,7 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
     /**
      * Compute the reward of a single stake.
      *
-     * @param stake stake struct.
+     * @param stake the stake struct.
      * @return the token rewarded (does not include the debt).
      */
     function _computeStakeReward(Stake storage stake)
