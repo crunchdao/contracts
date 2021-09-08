@@ -473,7 +473,7 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
     /**
      * Transfer the remaining tokens back to the current contract owner and then self destruct.
      *
-     * @dev This function must only be call for destruction!!
+     * @dev This function must only be called for destruction!!
      * @dev If the balance is 0, the `CrunchToken#transfer(address, uint256)` is not called.
      */
     function _transferRemainingAndSelfDestruct() internal {
