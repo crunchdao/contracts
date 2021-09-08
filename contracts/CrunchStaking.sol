@@ -452,21 +452,35 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
         return (stake.amount * numberOfDays * yield) / 1_000_000;
     }
 
+    event IndexUpdated(
+        uint256 fromIndex,
+        uint256 lastIndex,
+        address addr,
+        uint256 previousIndex,
+        address previousAddr,
+        address newAddrAtIndex
+    );
+
     /**
      * Delete an address from the `addresses` array.
      *
      * @dev To avoid holes, the last value will replace the deleted address.
      */
     function _deleteAddress(uint256 index) internal {
-        delete addresses[index];
-
         uint256 length = addresses.length;
-        if (length != 0) {
-            address addr = addresses[length - 1];
-            holders[addr].index = index;
+        require(
+            length != 0,
+            "Staking: cannot remove address if array length is zero"
+        );
 
-            addresses.pop();
+        uint256 last = length - 1;
+        if (last != index) {
+            address addr = addresses[last];
+            addresses[index] = addr;
+            holders[addr].index = index;
         }
+
+        addresses.pop();
     }
 
     /**
