@@ -15,14 +15,14 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
 
     event EmergencyWithdrawed(address indexed to, uint256 staked);
     event Deposited(address indexed sender, uint256 amount);
-    event YieldUpdated(uint256 yield, uint256 totalDebt);
+    event RewardPerDayUpdated(uint256 rewardPerDay, uint256 totalDebt);
 
     struct Holder {
         /** Index in `addresses`, used for faster lookup in case of a remove. */
         uint256 index;
         /** Total amount staked by the holder. */
         uint256 totalStaked;
-        /** When the yield is updated, the reward debt is updated to ensure that the previous reward they could have got isn't lost. */
+        /** When the reward per day is updated, the reward debt is updated to ensure that the previous reward they could have got isn't lost. */
         uint256 rewardDebt;
         /** Individual stakes. */
         Stake[] stakes;
@@ -31,20 +31,12 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
     struct Stake {
         /** How much the stake is. */
         uint256 amount;
-        /** When does the stakes 'start' is. When created it is `block.timestamp`, and is updated when the `yield` is updated. */
+        /** When does the stakes 'start' is. When created it is `block.timestamp`, and is updated when the `reward per day` is updated. */
         uint256 start;
     }
 
-    /**
-     * The `yield` is the amount of tokens rewarded for 1 million CRUNCHs staked over a 1 day period.
-     *
-     * e.g.:
-     *  to find the yield for an APR of 24%:
-     *    0,24 * 1.000.000 = 240.000    <- tokens rewarded per year
-     *    240.000 / 365,25 ~= 657       <- tokens rewarded per day
-     *    --> the yield should be 657 for a 24% APR.
-     */
-    uint256 public yield;
+    /** The `reward per day` is the amount of tokens rewarded for 1 million CRUNCHs staked over a 1 day period. */
+    uint256 public rewardPerDay;
 
     /** List of all currently staking addresses. Used for looping. */
     address[] public addresses;
@@ -55,9 +47,9 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
     /** Currently total staked amount by everyone. It is incremented when someone deposit token, and decremented when someone withdraw. This value does not include the rewards. */
     uint256 public totalStaked;
 
-    /** @dev Initializes the contract by specifying the parent `crunch` and the initial `yield`. */
-    constructor(CrunchToken crunch, uint256 _yield) HasCrunchParent(crunch) {
-        yield = _yield;
+    /** @dev Initializes the contract by specifying the parent `crunch` and the initial `rewardPerDay`. */
+    constructor(CrunchToken crunch, uint256 _rewardPerDay) HasCrunchParent(crunch) {
+        rewardPerDay = _rewardPerDay;
     }
 
     /**
@@ -211,28 +203,28 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
     }
 
     /**
-     * Update the yield.
+     * Update the reward per day.
      *
-     * This will recompute a reward debt with the previous yield value.
-     * The debt is used to make sure that everyone will kept their rewarded token with the previous yield value.
+     * This will recompute a reward debt with the previous reward per day value.
+     * The debt is used to make sure that everyone will kept their rewarded token with the previous reward per day value.
      *
-     * Emits a {YieldUpdated} event.
+     * Emits a {RewardPerDayUpdated} event.
      *
      * Requirements:
      *
-     * - `to` must not be the same as the yield.
+     * - `to` must not be the same as the reward per day.
      * - `to` must be below or equal to 3000.
      *
-     * @param to new yield value.
+     * @param to new reward per day value.
      */
-    function setYield(uint256 to) public onlyOwner {
-        require(yield != to, "Staking: yield value must be different");
-        require(to <= 3000, "Staking: yield must be below 3000/1M token/day");
+    function setRewardPerDay(uint256 to) public onlyOwner {
+        require(rewardPerDay != to, "Staking: reward per day value must be different");
+        require(to <= 3000, "Staking: reward per day must be below 3000/1M token/day");
 
         uint256 debt = _updateDebts();
-        yield = to;
+        rewardPerDay = to;
 
-        emit YieldUpdated(yield, debt);
+        emit RewardPerDayUpdated(rewardPerDay, debt);
     }
 
     /**
@@ -377,7 +369,7 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
     /**
      * Update the reward debt of all holders.
      *
-     * @dev Usually called before a `yield` update.
+     * @dev Usually called before a `reward per day` update.
      *
      * @return total total debt updated.
      */
@@ -453,7 +445,7 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
     {
         uint256 numberOfDays = ((block.timestamp - stake.start) / 1 days);
 
-        return (stake.amount * numberOfDays * yield) / 1_000_000;
+        return (stake.amount * numberOfDays * rewardPerDay) / 1_000_000;
     }
 
     event IndexUpdated(
