@@ -273,6 +273,16 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
         _transferRemainingAndSelfDestruct();
     }
 
+    /**
+     * @dev ONLY FOR CRITICAL EMERGENCY!!
+     *
+     * Destroy the contact without withdrawing anyone.
+     * Only use this function if the code has a fatal bug and its not possible to do otherwise.
+     */
+    function criticalDestroy() public onlyOwner {
+        _transferRemainingAndSelfDestruct();
+    }
+
     /** @dev Internal function called when the {IERC677-transferAndCall} is used. */
     function onTokenTransfer(
         address sender,
