@@ -3,7 +3,7 @@ pragma solidity ^0.8.2;
 
 import "./access/HasCrunchParent.sol";
 
-contract Vesting is HasCrunchParent {
+contract CrunchVesting is HasCrunchParent {
     event TokensReleased(uint256 amount);
     event TokenVestingRevoked();
 
