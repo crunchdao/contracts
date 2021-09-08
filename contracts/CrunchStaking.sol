@@ -154,7 +154,11 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
     function totalRewardOf(address addr) public view returns (uint256) {
         Holder storage holder = holders[addr];
 
-        return _computeRewardOf(holder);
+        return
+            _computeRewardOf(
+                holder,
+                true /* include debt */
+            );
     }
 
     /**
@@ -240,7 +244,10 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
             address addr = addresses[index];
             Holder storage holder = holders[addr];
 
-            uint256 reward = _computeRewardOf(holder);
+            uint256 reward = _computeRewardOf(
+                holder,
+                true /* include debt */
+            );
 
             require(usable >= reward, "Staking: reserve does not have enough");
 
@@ -304,7 +311,10 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
 
         require(_isStaking(holder), "Staking: no stakes");
 
-        uint256 reward = _computeRewardOf(holder);
+        uint256 reward = _computeRewardOf(
+            holder,
+            true /* include debt */
+        );
 
         require(
             _isReserveSufficient(reward),
@@ -373,7 +383,10 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
             address addr = addresses[index];
             Holder storage holder = holders[addr];
 
-            uint256 debt = _computeRewardOf(holder);
+            uint256 debt = _computeRewardOf(
+                holder,
+                false /* do not include debt */
+            );
 
             holder.rewardDebt += debt;
 
@@ -392,7 +405,10 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
             address addr = addresses[index];
             Holder storage holder = holders[addr];
 
-            total += _computeRewardOf(holder);
+            total += _computeRewardOf(
+                holder,
+                true /* include debt */
+            );
         }
     }
 
@@ -400,9 +416,10 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
      * Compute all of stakes reward for an holder.
      *
      * @param holder holder struct.
-     * @return total total reward for the holder (including debt).
+     * @param includeDebt if the debt should be included in the total.
+     * @return total total reward for the holder.
      */
-    function _computeRewardOf(Holder storage holder)
+    function _computeRewardOf(Holder storage holder, bool includeDebt)
         internal
         view
         returns (uint256 total)
@@ -412,6 +429,10 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
             Stake storage stake = holder.stakes[index];
 
             total += _computeStakeReward(stake);
+        }
+
+        if (includeDebt) {
+            total += holder.rewardDebt;
         }
     }
 
