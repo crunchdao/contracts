@@ -189,6 +189,10 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
         return addresses.length;
     }
 
+    function stakesOf(address addr) public view returns (Stake[] memory) {
+        return holders[addr].stakes;
+    }
+
     /**
      * @dev ONLY FOR EMERGENCY!!
      *
