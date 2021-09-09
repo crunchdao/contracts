@@ -10,7 +10,8 @@ contract CrunchVestingFactory is HasCrunchParent {
         address owner,
         address beneficiary,
         uint256 cliffDuration,
-        uint256 duration
+        uint256 duration,
+        bool revokable
     );
 
     uint256 public constant oneYear = 365.25 days;
@@ -20,14 +21,16 @@ contract CrunchVestingFactory is HasCrunchParent {
     function create(
         address beneficiary,
         uint256 cliffDuration,
-        uint256 duration
+        uint256 duration,
+        bool revokable
     ) public onlyOwner returns (CrunchVesting vesting) {
         vesting = new CrunchVesting(
             crunch,
             owner(),
             beneficiary,
             cliffDuration,
-            duration
+            duration,
+            revokable
         );
 
         emit Created(
@@ -36,16 +39,17 @@ contract CrunchVestingFactory is HasCrunchParent {
             owner(),
             beneficiary,
             cliffDuration,
-            duration
+            duration,
+            revokable
         );
     }
 
-    function createSimple(address beneficiary)
+    function createSimple(address beneficiary, bool revokable)
         public
         onlyOwner
         returns (CrunchVesting)
     {
-        return create(beneficiary, oneYear, oneYear * 4);
+        return create(beneficiary, oneYear, oneYear * 4, revokable);
     }
 
     function transferToOwner() public onlyOwner returns (uint256 balance) {

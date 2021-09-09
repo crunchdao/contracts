@@ -20,6 +20,9 @@ contract CrunchVesting is HasCrunchParent {
     /** the amount of the token released. */
     uint256 public released;
 
+    /** true if the vesting can be revoked. */
+    bool public revokable;
+
     /** true if the vesting has been revoked. */
     bool public revoked;
 
@@ -28,7 +31,8 @@ contract CrunchVesting is HasCrunchParent {
         address _overrideOwner,
         address _beneficiary,
         uint256 _cliffDuration,
-        uint256 _duration
+        uint256 _duration,
+        bool _revokable
     ) HasCrunchParent(crunch) {
         require(
             _beneficiary != address(0),
@@ -44,6 +48,7 @@ contract CrunchVesting is HasCrunchParent {
         start = block.timestamp;
         cliff = start + _cliffDuration;
         duration = _duration;
+        revokable = _revokable;
 
         if (_overrideOwner != address(0)) {
             transferOwnership(_overrideOwner);
@@ -65,6 +70,7 @@ contract CrunchVesting is HasCrunchParent {
 
     /** @notice Allows the owner to revoke the vesting. Tokens already vested remain in the contract, the rest are returned to the owner. */
     function revoke() public onlyOwner {
+        require(revokable, "Vesting: token not revokable");
         require(!revoked, "Vesting: token already revoked");
 
         uint256 balance = crunch.balanceOf(address(this));
