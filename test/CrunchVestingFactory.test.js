@@ -40,27 +40,34 @@ contract("Crunch Vesting Factory", async (accounts) => {
   it("create()", async () => {
     const cliffDuration = 60;
     const duration = 600;
+    const revokable = true;
 
     const vesting = await vestingAt(
-      factory.create(beneficiary, cliffDuration, duration)
+      factory.create(beneficiary, cliffDuration, duration, revokable)
     );
 
     await expect(vesting.beneficiary()).to.eventually.be.equal(beneficiary);
     await expect(vesting.duration()).to.eventually.be.a.bignumber.equal(
       new BN(duration)
     );
+    await expect(vesting.revokable()).to.eventually.be.equal(revokable);
     await expect(vesting.owner()).to.eventually.be.equal(
       owner
     ); /* should not be the factory */
   });
 
   it("createSimple()", async () => {
-    const vesting = await vestingAt(factory.createSimple(beneficiary));
+    const revokable = true;
+
+    const vesting = await vestingAt(
+      factory.createSimple(beneficiary, revokable)
+    );
 
     await expect(vesting.beneficiary()).to.eventually.be.equal(beneficiary);
     await expect(vesting.duration()).to.eventually.be.a.bignumber.equal(
       new BN(time.years(4))
     );
+    await expect(vesting.revokable()).to.eventually.be.equal(revokable);
   });
 
   it("transferToOwner()", async () => {
@@ -71,15 +78,28 @@ contract("Crunch Vesting Factory", async (accounts) => {
     await expect(factory.transferToOwner()).to.be.fulfilled;
   });
 
-  it("vesting.revoke()", async () => {
+  it("vesting.revoke() : revokable", async () => {
     const cliffDuration = 60;
     const duration = 600;
+    const revokable = true;
 
     const vesting = await vestingAt(
-      factory.create(beneficiary, cliffDuration, duration)
+      factory.create(beneficiary, cliffDuration, duration, revokable)
     );
 
     await expect(vesting.revoke()).to.be.fulfilled;
     await expect(factory.transferToOwner()).to.be.rejected;
+  });
+
+  it("vesting.revoke() : not revokable", async () => {
+    const cliffDuration = 60;
+    const duration = 600;
+    const revokable = false;
+
+    const vesting = await vestingAt(
+      factory.create(beneficiary, cliffDuration, duration, revokable)
+    );
+
+    await expect(vesting.revoke()).to.be.rejected;
   });
 });
