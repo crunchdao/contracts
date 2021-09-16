@@ -192,8 +192,24 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
         return addresses.length;
     }
 
-    function stakesOf(address addr) public view returns (Stake[] memory) {
+    /**
+     * Get the stakes array of an holder.
+     *
+     * @param addr address to get the stakes array.
+     * @return the holder's stakes array.
+     */
+    function stakesOf(address addr) external view returns (Stake[] memory) {
         return holders[addr].stakes;
+    }
+
+    /**
+     * Get the stakes array length of an holder.
+     *
+     * @param addr address to get the stakes array length.
+     * @return the length of the `stakes` array.
+     */
+    function stakesCountOf(address addr) external view returns (uint256) {
+        return holders[addr].stakes.length;
     }
 
     /**
