@@ -486,4 +486,25 @@ contract("Crunch Stacking", async (accounts) => {
       staking.stakesCountOf(owner)
     ).to.eventually.be.a.bignumber.equal(new BN(0));
   });
+
+  it("emptyReserve()", async () => {
+    const reserve = 100;
+
+    await expect(staking.emptyReserve()).to.be.rejected;
+
+    await expect(crunch.transfer(staking.address, reserve)).to.be.fulfilled;
+
+    await expect(staking.reserve()).to.eventually.be.a.bignumber.equal(
+      new BN(reserve)
+    );
+
+    await expect(staking.emptyReserve({ from: staker1 })).to.be
+      .rejected; /* not owner */
+
+    await expect(staking.emptyReserve()).to.be.fulfilled;
+
+    await expect(staking.reserve()).to.eventually.be.a.bignumber.equal(
+      new BN(0)
+    );
+  });
 });
