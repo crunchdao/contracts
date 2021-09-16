@@ -298,6 +298,19 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
     }
 
     /**
+     * @dev ONLY FOR EMERGENCY!!
+     *
+     * Empty the reserve if there is a problem.
+     */
+    function emptyReserve() external onlyOwner {
+        uint256 amount = reserve();
+
+        require(amount != 0, "Staking: reserve is empty");
+
+        crunch.transfer(owner(), amount);
+    }
+
+    /**
      * Destroy the contact after withdrawing everyone.
      *
      * @dev If the reserve is not zero after the withdraw, the remaining will be sent back to the contract's owner.
