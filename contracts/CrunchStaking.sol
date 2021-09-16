@@ -103,7 +103,7 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
      * @dev Test if the caller is currently staking.
      * @return `true` if the caller is staking, else if not.
      */
-    function isStaking() public view returns (bool) {
+    function isCallerStaking() public view returns (bool) {
         return isStaking(_msgSender());
     }
 
