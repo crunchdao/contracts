@@ -42,7 +42,7 @@ contract("Crunch Stacking", async (accounts) => {
     //     });
     // });
     await expect(staking.deposit(100)).to.be.fulfilled;
-    await expect(staking.isStaking()).to.eventually.be.true;
+    await expect(staking.isCallerStaking()).to.eventually.be.true;
   });
 
   it("onTokenTransfer(address, uint256, bytes) : (0x1, 0, 0x0)", async () => {
@@ -53,7 +53,7 @@ contract("Crunch Stacking", async (accounts) => {
   it("onTokenTransfer(address, uint256, bytes) : (0x1, 100, 0x0)", async () => {
     await expect(crunch.transferAndCall(staking.address, 100, "0x0")).to.be
       .fulfilled;
-    await expect(staking.isStaking()).to.eventually.be.true;
+    await expect(staking.isCallerStaking()).to.eventually.be.true;
   });
 
   it("withdraw() : not staking", async () => {
@@ -69,7 +69,7 @@ contract("Crunch Stacking", async (accounts) => {
 
     await expect(staking.deposit(amount)).to.be.fulfilled;
     await expect(staking.withdraw()).to.be.fulfilled;
-    await expect(staking.isStaking()).to.eventually.be.false;
+    await expect(staking.isCallerStaking()).to.eventually.be.false;
 
     const after = await crunch.balanceOf(accounts[0]);
 
@@ -249,17 +249,17 @@ contract("Crunch Stacking", async (accounts) => {
     );
   });
 
-  it("isStaking()", async () => {
-    await expect(staking.isStaking()).to.eventually.be.false;
+  it("isCallerStaking()", async () => {
+    await expect(staking.isCallerStaking()).to.eventually.be.false;
 
     await expect(crunch.transferAndCall(staking.address, 100, "0x0")).to.be
       .fulfilled;
 
-    await expect(staking.isStaking()).to.eventually.be.true;
+    await expect(staking.isCallerStaking()).to.eventually.be.true;
 
     await expect(staking.withdraw()).to.be.fulfilled;
 
-    await expect(staking.isStaking()).to.eventually.be.false;
+    await expect(staking.isCallerStaking()).to.eventually.be.false;
   });
 
   it("isStaking(address)", async () => {
