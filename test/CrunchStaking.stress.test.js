@@ -128,7 +128,6 @@ contract("Crunch Staking [ Stress ]", async (accounts) => {
     }
 
     const tests = [0.06, 0.1, 0.15, 0.1, 0.04];
-
     const wait = 4; /* month */
 
     for (let testIndex = 0; testIndex < tests.length; testIndex++) {
