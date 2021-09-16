@@ -430,4 +430,60 @@ contract("Crunch Stacking", async (accounts) => {
     await expect(crunch.balanceOf(staker1)).to.eventually.be.a.bignumber.equal(stakerBefore);
     await expect(crunch.balanceOf(owner)).to.eventually.be.a.bignumber.equal(owerBefore);
   });
+
+  it("stakesOf(address)", async () => {
+    const amount1 = 100;
+    const amount2 = 200;
+
+    await expect(staking.stakesOf(staker1)).to.eventually.be.empty;
+
+    await expect(
+      crunch.transferAndCall(staking.address, amount1, "0x0", { from: staker1 })
+    ).to.be.fulfilled;
+
+    let stakes = await staking.stakesOf(staker1);
+
+    expect(stakes.length).to.be.equal(1);
+    expect(stakes[0].amount).to.be.equal(amount1.toString());
+
+    await expect(
+      crunch.transferAndCall(staking.address, amount2, "0x0", { from: staker1 })
+    ).to.be.fulfilled;
+
+    stakes = await staking.stakesOf(staker1);
+
+    expect(stakes.length).to.be.equal(2);
+    expect(stakes[0].amount).to.be.equal(amount1.toString());
+    expect(stakes[1].amount).to.be.equal(amount2.toString());
+
+    await expect(staking.withdraw({ from: staker1 })).to.be.fulfilled;
+
+    await expect(staking.stakesOf(staker1)).to.eventually.be.empty;
+  });
+
+  it("stakesCountOf(address)", async () => {
+    await expect(
+      staking.stakesCountOf(owner)
+    ).to.eventually.be.a.bignumber.equal(new BN(0));
+
+    await expect(crunch.transferAndCall(staking.address, 1, "0x0")).to.be
+      .fulfilled;
+
+    await expect(
+      staking.stakesCountOf(owner)
+    ).to.eventually.be.a.bignumber.equal(new BN(1));
+
+    await expect(crunch.transferAndCall(staking.address, 1, "0x0")).to.be
+      .fulfilled;
+
+    await expect(
+      staking.stakesCountOf(owner)
+    ).to.eventually.be.a.bignumber.equal(new BN(2));
+
+    await expect(staking.withdraw()).to.be.fulfilled;
+
+    await expect(
+      staking.stakesCountOf(owner)
+    ).to.eventually.be.a.bignumber.equal(new BN(0));
+  });
 });
