@@ -11,7 +11,7 @@ import "./CrunchToken.sol";
  * To start staking, use the {CrunchStaking-deposit(address)} method, but this require an allowance from your account.
  * Another method is to do a {CrunchToken-transferAndCall(address, uint256, bytes)} to avoid doing 2 transactions. (as per ERC-677 standart)
  *
- * Withdrawing will withdraw everything. There is currently no method to only withdraw a fixed amount.
+ * Withdrawing will withdraw everything. There is currently no method to only withdraw a specific amount.
  *
  * @author Enzo CACERES
  */
@@ -75,30 +75,34 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
      * Emits a {Deposited} event.
      *
      * Requirements:
-     *
      * - `amount` cannot be the zero address.
      * - `caller` must have a balance of at least `amount`.
+     *
+     * @param amount amount to reposit.
      */
-    function deposit(uint256 amount) public {
+    function deposit(uint256 amount) external {
         crunch.transferFrom(_msgSender(), address(this), amount);
 
         _deposit(_msgSender(), amount);
     }
 
     /**
-     * @dev Withdraw the staked tokens with the reward.
+     * Withdraw the staked tokens with the reward.
      *
      * Emits a {Withdrawed} event.
      *
      * Requirements:
-     *
      * - `caller` to be staking.
      */
-    function withdraw() public {
+    function withdraw() external {
         _withdraw(_msgSender());
     }
 
-    /** @dev Returns the current reserve for rewards. */
+    /**
+     * Returns the current reserve for rewards.
+     *
+     * @return the contract balance - the total staked.
+     */
     function reserve() public view returns (uint256) {
         uint256 balance = contractBalance();
 
@@ -112,7 +116,8 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
     }
 
     /**
-     * @dev Test if the caller is currently staking.
+     * Test if the caller is currently staking.
+     *
      * @return `true` if the caller is staking, else if not.
      */
     function isCallerStaking() public view returns (bool) {
@@ -120,7 +125,8 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
     }
 
     /**
-     * @dev Test if an address is currently staking.
+     * Test if an address is currently staking.
+     *
      * @param `addr` address to test.
      * @return `true` if the address is staking, else if not.
      */
@@ -129,19 +135,29 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
     }
 
     /**
-     * @dev Get the current balance (`crunch.balanceOf(address)`) in CRUNCH of this smart contract.
+     * Get the current balance in CRUNCH of this smart contract.
+     *
      * @return The current staking contract's balance in CRUNCH.
      */
     function contractBalance() public view returns (uint256) {
         return crunch.balanceOf(address(this));
     }
 
-    /** @dev Returns the sum of the specified `addr` staked amount. */
+    /**
+     * Returns the sum of the specified `addr` staked amount.
+     *
+     * @param addr address to check.
+     * @return the total staked of the holder.
+     */
     function totalStakedOf(address addr) public view returns (uint256) {
         return holders[addr].totalStaked;
     }
 
-    /** @dev Returns the computed reward of everyone. */
+    /**
+     * Returns the computed reward of everyone.
+     *
+     * @return total the computed total reward of everyone.
+     */
     function totalReward() public view returns (uint256 total) {
         uint256 length = addresses.length;
         for (uint256 index = 0; index < length; index++) {
@@ -152,7 +168,7 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
     }
 
     /**
-     * Compute the reward of the specified `addr`
+     * Compute the reward of the specified `addr`.
      *
      * @param addr address to test.
      * @return the reward the address would get.
@@ -163,16 +179,27 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
         return _computeRewardOf(holder);
     }
 
-    function totalRewardDebt() public view returns (uint256 total) {
+    /**
+     * Sum the reward debt of everyone.
+     *
+     * @return total the sum of all `Holder.rewardDebt`.
+     */
+    function totalRewardDebt() external view returns (uint256 total) {
         uint256 length = addresses.length;
         for (uint256 index = 0; index < length; index++) {
             address addr = addresses[index];
 
-            total += totalRewardDebtOf(addr);
+            total += rewardDebtOf(addr);
         }
     }
 
-    function totalRewardDebtOf(address addr) public view returns (uint256) {
+    /**
+     * Get the reward debt of an holder.
+     *
+     * @param addr holder's address.
+     * @return the reward debt of the holder.
+     */
+    function rewardDebtOf(address addr) public view returns (uint256) {
         return holders[addr].rewardDebt;
     }
 
@@ -234,7 +261,6 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
      * Emits a {EmergencyWithdrawed} event.
      *
      * Requirements:
-     *
      * - `caller` to be staking.
      */
     function emergencyWithdraw() public {
@@ -250,9 +276,8 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
      * Emits a {RewardPerDayUpdated} event.
      *
      * Requirements:
-     *
      * - `to` must not be the same as the reward per day.
-     * - `to` must be below or equal to 3000.
+     * - `to` must be below or equal to 15000.
      *
      * @param to new reward per day value.
      */
@@ -336,6 +361,14 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
         _deposit(sender, value);
     }
 
+    /**
+     * Deposit.
+     *
+     * @dev If the depositor is not currently holding, the `Holder.start` is set and his address is added to the addresses list.
+     *
+     * @param from depositor address.
+     * @param amount amount to deposit.
+     */
     function _deposit(address from, uint256 amount) internal {
         require(amount != 0, "cannot deposit zero");
 
@@ -355,6 +388,17 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
         emit Deposited(from, amount);
     }
 
+    /**
+     * Withdraw.
+     *
+     * @dev This will remove the `Holder` from the `holders` mapping and the address from the `addresses` array.
+     *
+     * Requirements:
+     * - `addr` must be staking.
+     * - the reserve must have enough token.
+     *
+     * @param addr address to withdraw.
+     */
     function _withdraw(address addr) internal {
         Holder storage holder = holders[addr];
 
@@ -379,6 +423,19 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
         emit Withdrawed(addr, reward, staked, total);
     }
 
+    /**
+     * Emergency withdraw.
+     *
+     * This is basically the same as {CrunchStaking-_withdraw(address)}, but without the reward.
+     * This function must only be used for emergencies as it consume less gas and does not have the check for the reserve.
+     *
+     * @dev This will remove the `Holder` from the `holders` mapping and the address from the `addresses` array.
+     *
+     * Requirements:
+     * - `addr` must be staking.
+     *
+     * @param addr address to withdraw.
+     */
     function _emergencyWithdraw(address addr) internal {
         Holder storage holder = holders[addr];
 
@@ -410,6 +467,7 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
      *
      * @dev Its done by testing if the stake array length is equal to zero. Since its not possible, it mean that the holder is not currently staking and the struct is only zero.
      *
+     * @param holder holder struct.
      * @return `true` if the holder is staking, `false` otherwise.
      */
     function _isStaking(Holder storage holder) internal view returns (bool) {
@@ -437,6 +495,12 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
         }
     }
 
+    /**
+     * Update the reward debt of a specified `holder`.
+     *
+     * @param holder holder struct to update.
+     * @return total sum of debt added.
+     */
     function _updateDebtsOf(Holder storage holder)
         internal
         returns (uint256 total)
@@ -507,6 +571,8 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
      * Delete an address from the `addresses` array.
      *
      * @dev To avoid holes, the last value will replace the deleted address.
+     *
+     * @param index address's index to delete.
      */
     function _deleteAddress(uint256 index) internal {
         uint256 length = addresses.length;
