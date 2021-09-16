@@ -120,7 +120,7 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
      *
      * @return `true` if the caller is staking, else if not.
      */
-    function isCallerStaking() public view returns (bool) {
+    function isCallerStaking() external view returns (bool) {
         return isStaking(_msgSender());
     }
 
@@ -149,7 +149,7 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
      * @param addr address to check.
      * @return the total staked of the holder.
      */
-    function totalStakedOf(address addr) public view returns (uint256) {
+    function totalStakedOf(address addr) external view returns (uint256) {
         return holders[addr].totalStaked;
     }
 
@@ -208,7 +208,7 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
      *
      * @return whether the reserve has enough CRUNCH to give to everyone.
      */
-    function isReserveSufficient() public view returns (bool) {
+    function isReserveSufficient() external view returns (bool) {
         return _isReserveSufficient(totalReward());
     }
 
@@ -218,7 +218,7 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
      * @param addr address to test.
      * @return whether the reserve has enough CRUNCH to give to this address.
      */
-    function isReserveSufficientFor(address addr) public view returns (bool) {
+    function isReserveSufficientFor(address addr) external view returns (bool) {
         return _isReserveSufficient(totalRewardOf(addr));
     }
 
@@ -227,7 +227,7 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
      *
      * @return the length of the `addresses` array.
      */
-    function stakerCount() public view returns (uint256) {
+    function stakerCount() external view returns (uint256) {
         return addresses.length;
     }
 
@@ -263,7 +263,7 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
      * Requirements:
      * - `caller` to be staking.
      */
-    function emergencyWithdraw() public {
+    function emergencyWithdraw() external {
         _emergencyWithdraw(_msgSender());
     }
 
@@ -281,7 +281,7 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
      *
      * @param to new reward per day value.
      */
-    function setRewardPerDay(uint256 to) public onlyOwner {
+    function setRewardPerDay(uint256 to) external onlyOwner {
         require(
             rewardPerDay != to,
             "Staking: reward per day value must be different"
@@ -302,7 +302,7 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
      *
      * @dev If the reserve is not zero after the withdraw, the remaining will be sent back to the contract's owner.
      */
-    function destroy() public onlyOwner {
+    function destroy() external onlyOwner {
         uint256 usable = reserve();
 
         uint256 length = addresses.length;
@@ -328,7 +328,7 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
      *
      * If the reserve is not zero after the withdraw, the remaining will be sent back to the contract's owner.
      */
-    function emergencyDestroy() public onlyOwner {
+    function emergencyDestroy() external onlyOwner {
         uint256 length = addresses.length;
         for (uint256 index = 0; index < length; index++) {
             address addr = addresses[index];
@@ -346,7 +346,7 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
      * Destroy the contact without withdrawing anyone.
      * Only use this function if the code has a fatal bug and its not possible to do otherwise.
      */
-    function criticalDestroy() public onlyOwner {
+    function criticalDestroy() external onlyOwner {
         _transferRemainingAndSelfDestruct();
     }
 
