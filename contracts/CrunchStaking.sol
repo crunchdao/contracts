@@ -5,6 +5,16 @@ import "./erc677/IERC677Receiver.sol";
 import "./access/HasCrunchParent.sol";
 import "./CrunchToken.sol";
 
+/**
+ * DataCrunch Staking contract for the CRUNCH token.
+ *
+ * To start staking, use the {CrunchStaking-deposit(address)} method, but this require an allowance from your account.
+ * Another method is to do a {CrunchToken-transferAndCall(address, uint256, bytes)} to avoid doing 2 transactions. (as per ERC-677 standart)
+ *
+ * Withdrawing will withdraw everything. There is currently no method to only withdraw a fixed amount.
+ *
+ * @author Enzo CACERES
+ */
 contract CrunchStaking is HasCrunchParent, IERC677Receiver {
     event Withdrawed(
         address indexed to,
