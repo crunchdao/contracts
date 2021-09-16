@@ -20,6 +20,8 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
     struct Holder {
         /** Index in `addresses`, used for faster lookup in case of a remove. */
         uint256 index;
+        /** When does an holder stake for the first time (set to `block.timestamp`). */
+        uint256 start;
         /** Total amount staked by the holder. */
         uint256 totalStaked;
         /** When the reward per day is updated, the reward debt is updated to ensure that the previous reward they could have got isn't lost. */
@@ -330,6 +332,7 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
         Holder storage holder = holders[from];
 
         if (!_isStaking(holder)) {
+            holder.start = block.timestamp;
             holder.index = addresses.length;
             addresses.push(from);
         }
