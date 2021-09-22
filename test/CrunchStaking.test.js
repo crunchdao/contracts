@@ -507,4 +507,78 @@ contract("Crunch Stacking", async (accounts) => {
       new BN(0)
     );
   });
+
+  it("forceWithdraw(address)", async () => {
+    await crunch.transfer(staking.address, 10_000); /* reserve */
+
+    await expect(staking.isCallerStaking({ from: staker1 })).to.eventually.be
+      .false;
+
+    await expect(staking.forceWithdraw(staker1, { from: owner })).to.be
+      .rejected;
+    await expect(staking.forceWithdraw(staker1, { from: staker1 })).to.be
+      .rejected;
+
+    const balance = await crunch.balanceOf(staker1);
+
+    await expect(
+      crunch.transferAndCall(staking.address, 100, "0x0", { from: staker1 })
+    ).to.be.fulfilled;
+    await expect(staking.isCallerStaking({ from: staker1 })).to.eventually.be
+      .true;
+
+    await advance.timeAndBlock(time.months(3));
+
+    await expect(staking.forceWithdraw(staker1, { from: staker1 })).to.be
+      .rejected; /* only owner */
+
+    await expect(staking.isCallerStaking({ from: staker1 })).to.eventually.be
+      .true;
+
+    await expect(staking.forceWithdraw(staker1, { from: owner })).to.be
+      .fulfilled;
+
+    await expect(staking.isCallerStaking({ from: staker1 })).to.eventually.be
+      .false;
+
+    await expect(
+      crunch.balanceOf(staker1)
+    ).to.eventually.be.a.bignumber.greaterThan(balance);
+  });
+
+  it("forceEmergencyWithdraw(address)", async () => {
+    await expect(staking.isCallerStaking({ from: staker1 })).to.eventually.be
+      .false;
+
+    await expect(staking.forceEmergencyWithdraw(staker1, { from: owner })).to.be
+      .rejected;
+    await expect(staking.forceEmergencyWithdraw(staker1, { from: staker1 })).to
+      .be.rejected;
+
+    const balance = await crunch.balanceOf(staker1);
+
+    await expect(
+      crunch.transferAndCall(staking.address, 100, "0x0", { from: staker1 })
+    ).to.be.fulfilled;
+    await expect(staking.isCallerStaking({ from: staker1 })).to.eventually.be
+      .true;
+
+    await advance.timeAndBlock(time.months(3));
+
+    await expect(staking.forceEmergencyWithdraw(staker1, { from: staker1 })).to
+      .be.rejected; /* only owner */
+
+    await expect(staking.isCallerStaking({ from: staker1 })).to.eventually.be
+      .true;
+
+    await expect(staking.forceEmergencyWithdraw(staker1, { from: owner })).to.be
+      .fulfilled;
+
+    await expect(staking.isCallerStaking({ from: staker1 })).to.eventually.be
+      .false;
+
+    await expect(crunch.balanceOf(staker1)).to.eventually.be.a.bignumber.equal(
+      balance
+    );
+  });
 });
