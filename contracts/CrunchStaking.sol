@@ -14,6 +14,7 @@ import "./CrunchToken.sol";
  * Withdrawing will withdraw everything. There is currently no method to only withdraw a specific amount.
  *
  * @author Enzo CACERES
+ * @author Arnaud CASTILLO
  */
 contract CrunchStaking is HasCrunchParent, IERC677Receiver {
     event Withdrawed(
