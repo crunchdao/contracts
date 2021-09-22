@@ -254,6 +254,19 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
     /**
      * @dev ONLY FOR EMERGENCY!!
      *
+     * Force an address to withdraw.
+     *
+     * @dev Should only be called if a {CrunchStaking-destroy()} would cost too much gas to be executed.
+     *
+     * @param addr address to withdraw.
+     */
+    function forceWithdraw(address addr) external onlyOwner {
+        _withdraw(addr);
+    }
+
+    /**
+     * @dev ONLY FOR EMERGENCY!!
+     *
      * Emergency withdraw.
      *
      * All rewards are discarded. Only initial staked amount will be transfered back!
@@ -265,6 +278,19 @@ contract CrunchStaking is HasCrunchParent, IERC677Receiver {
      */
     function emergencyWithdraw() external {
         _emergencyWithdraw(_msgSender());
+    }
+
+    /**
+     * @dev ONLY FOR EMERGENCY!!
+     *
+     * Force an address to emergency withdraw.
+     *
+     * @dev Should only be called if a {CrunchStaking-emergencyDestroy()} would cost too much gas to be executed.
+     *
+     * @param addr address to emergency withdraw.
+     */
+    function forceEmergencyWithdraw(address addr) external onlyOwner {
+        _emergencyWithdraw(addr);
     }
 
     /**
