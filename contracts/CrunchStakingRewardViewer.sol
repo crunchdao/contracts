@@ -10,8 +10,6 @@ interface ICrunchStakingView {
     function totalStakedOf(address addr) external view returns (uint256);
 
     function totalRewardOf(address addr) external view returns (uint256);
-
-    function contractBalance() external view returns (uint256);
 }
 
 /**
@@ -58,7 +56,7 @@ contract CrunchStakingRewardViewer is IERC20, IERC20Metadata, Ownable {
      * @return the current staking's contract balance in CRUNCH.
      */
     function totalSupply() external view override returns (uint256) {
-        return staking.contractBalance();
+        return crunch.balanceOf(address(staking));
     }
 
     /**
