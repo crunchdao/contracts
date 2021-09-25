@@ -14,13 +14,16 @@ interface ICrunchStakingView {
     function contractBalance() external view returns (uint256);
 }
 
-contract CrunchStakingRewardViewer is Context, IERC20, IERC20Metadata {
+contract CrunchStakingRewardViewer is Context, IERC20, IERC20Metadata, Ownable {
+    event CrunchUpdated(address indexed to);
+    event StakingUpdated(address indexed to);
+
     IERC20Metadata public crunch;
     ICrunchStakingView public staking;
 
     constructor(IERC20Metadata _crunch, ICrunchStakingView _staking) {
-        crunch = _crunch;
-        staking = _staking;
+        setCrunch(_crunch);
+        setStaking(_staking);
 
         /* make etherscan detect this contract as an ERC20 token */
         emit Transfer(address(0), address(0), 0);
@@ -81,6 +84,28 @@ contract CrunchStakingRewardViewer is Context, IERC20, IERC20Metadata {
         address,
         uint256
     ) external override disabled returns (bool) {}
+
+    function setCrunch(IERC20Metadata _crunch) public onlyOwner {
+        require(
+            address(_crunch) != address(0),
+            "crunch token contract must not be zero"
+        );
+
+        crunch = _crunch;
+
+        emit CrunchUpdated(address(crunch));
+    }
+
+    function setStaking(ICrunchStakingView _staking) public onlyOwner {
+        require(
+            address(_staking) != address(0),
+            "staking contract must not be zero"
+        );
+
+        staking = _staking;
+
+        emit StakingUpdated(address(staking));
+    }
 
     modifier disabled() {
         _;
