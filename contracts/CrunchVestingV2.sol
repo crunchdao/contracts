@@ -5,9 +5,9 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract CrunchVestingV2 is Ownable {
-    event CRUNCHTokenUpdate(address from, address to);
     event TokensReleased(uint256 amount);
     event TokenVestingRevoked();
+    event CrunchTokenUpdate(address indexed previousCrunchToken, address indexed newCrunchToken);
     event BeneficiaryTransferred(address indexed previousBeneficiary, address indexed newBeneficiary);
 
     /* CRUNCH erc20 address. */
@@ -107,17 +107,21 @@ contract CrunchVestingV2 is Ownable {
     }
 
     function setCrunch(IERC20 newCrunch) external onlyOwner {
-        address from = address(crunch);
-        address to = address(newCrunch);
+        require(
+            address(newCrunch) != address(0),
+            "Vesting: new crunch cannot be null"
+        );
 
         require(
-            from != to,
+            crunch != newCrunch,
             "Vesting: token address cannot be updated to the same value"
         );
 
+        address previousCrunch = address(crunch);
+        
         crunch = newCrunch;
 
-        emit CRUNCHTokenUpdate(from, to);
+        emit CrunchTokenUpdate(previousCrunch, address(newCrunch));
     }
 
     /**
