@@ -9,6 +9,7 @@ contract CrunchVesting is Ownable {
     event CRUNCHTokenUpdate(address from, address to);
     event TokensReleased(uint256 amount);
     event TokenVestingRevoked();
+    event BeneficiaryTransferred(address indexed previousBeneficiary, address indexed newBeneficiary);
 
     /* CRUNCH erc20 address. */
     IERC20 public crunch;
@@ -118,5 +119,29 @@ contract CrunchVesting is Ownable {
         crunch = newCrunch;
 
         emit CRUNCHTokenUpdate(from, to);
+    }
+
+    /**
+     * @dev Transfers benefeciary of the contract to a new account (`newBeneficiary`).
+     * Can only be called by the current benefeciary.
+     */
+    function transferBeneficiary(address newBeneficiary) external onlyBeneficiary {
+        address from = beneficiary;
+        address to = newBeneficiary;
+
+        require(
+            from != to,
+            "Vesting: beneficiary cannot be updated to the same value"
+        );
+
+        beneficiary = from;
+
+        emit BeneficiaryTransferred(from, to);
+    }
+
+    /** @dev Throws if called by any account other than the beneficiary. */
+    modifier onlyBeneficiary() {
+        require(owner() == _msgSender(), "Vesting: caller is not the beneficiary");
+        _;
     }
 }
