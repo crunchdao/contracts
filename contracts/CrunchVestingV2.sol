@@ -4,7 +4,7 @@ pragma solidity ^0.8.2;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-contract CrunchVesting is Ownable {
+contract CrunchVestingV2 is Ownable {
     event CRUNCHTokenUpdate(address from, address to);
     event TokensReleased(uint256 amount);
     event TokenVestingRevoked();
