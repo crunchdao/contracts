@@ -125,22 +125,25 @@ contract CrunchVestingV2 is Ownable {
      * Can only be called by the current benefeciary.
      */
     function transferBeneficiary(address newBeneficiary) external onlyBeneficiary {
-        address from = beneficiary;
-        address to = newBeneficiary;
-
         require(
-            from != to,
+            newBeneficiary != address(0),
+            "Vesting: beneficiary cannot be null"
+        );
+        require(
+            beneficiary != newBeneficiary,
             "Vesting: beneficiary cannot be updated to the same value"
         );
 
-        beneficiary = from;
+        address previousBeneficiary = beneficiary;
 
-        emit BeneficiaryTransferred(from, to);
+        beneficiary = newBeneficiary;
+
+        emit BeneficiaryTransferred(previousBeneficiary, newBeneficiary);
     }
 
     /** @dev Throws if called by any account other than the beneficiary. */
     modifier onlyBeneficiary() {
-        require(owner() == _msgSender(), "Vesting: caller is not the beneficiary");
+        require(beneficiary == _msgSender(), "Vesting: caller is not the beneficiary");
         _;
     }
 }
