@@ -34,7 +34,7 @@ contract CrunchVesting is Ownable {
     bool public revoked;
 
     constructor(
-        IERC20 crunch,
+        IERC20 _crunch,
         address _beneficiary,
         uint256 _cliffDuration,
         uint256 _duration,
@@ -50,7 +50,7 @@ contract CrunchVesting is Ownable {
         );
         require(_duration > 0, "Vesting: duration is 0");
 
-        crunch = crunch;
+        crunch = _crunch;
         beneficiary = _beneficiary;
         start = block.timestamp;
         cliff = start + _cliffDuration;
