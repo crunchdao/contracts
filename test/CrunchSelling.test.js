@@ -3,31 +3,39 @@ const { expect, BN } = require("./helper/chai");
 
 const CrunchToken = artifacts.require("CrunchToken");
 const CrunchSelling = artifacts.require("CrunchSelling");
+const USDCoin = artifacts.require("USDCoin");
 
-contract("Crunch Vesting", async ([owner, ...accounts]) => {
+const nulled = "0x0000000000000000000000000000000000000000";
+const dummy = "0x4242424242424242424242424242424242424242";
+
+const FORTY_ONE = new BN(web3.utils.toWei("41"));
+const FORTY_TWO = new BN(web3.utils.toWei("42"));
+
+contract("Crunch Vesting", async ([owner, user, ...accounts]) => {
+  const fromUser = { from: user };
+
+  let usdc;
   let crunch;
   let selling;
 
-  const initialAmount = new BN(10000);
   const initialPrice = new BN(1_000_000 / 4); /* 4 USD */
 
   beforeEach(async () => {
     crunch = await CrunchToken.new();
+    usdc = await USDCoin.new();
 
     /* using the crunch as a fake usdc */
     selling = await CrunchSelling.new(
       crunch.address,
-      crunch.address,
+      usdc.address,
       initialPrice
     );
-
-    await crunch.transfer(selling.address, initialAmount);
   });
 
   it("initial state", async () => {
     await expect(selling.owner()).to.eventually.be.equal(owner);
     await expect(selling.crunch()).to.eventually.be.equal(crunch.address);
-    await expect(selling.usdc()).to.eventually.be.equal(crunch.address);
+    await expect(selling.usdc()).to.eventually.be.equal(usdc.address);
     await expect(selling.price()).to.eventually.be.a.bignumber.equal(
       initialPrice
     );
@@ -74,14 +82,12 @@ contract("Crunch Vesting", async ([owner, ...accounts]) => {
     const amount = new BN(1000);
 
     await expect(selling.reserve()).to.eventually.be.a.bignumber.equal(
-      initialAmount
+      new BN(0)
     );
 
-    await expect(crunch.transfer(selling.address, amount)).to.be.fulfilled;
+    await expect(usdc.mint(selling.address, amount)).to.be.fulfilled;
 
-    await expect(selling.reserve()).to.eventually.be.a.bignumber.equal(
-      initialAmount.add(amount)
-    );
+    await expect(selling.reserve()).to.eventually.be.a.bignumber.equal(amount);
   });
 
   it("pause()", async () => {
@@ -105,9 +111,6 @@ contract("Crunch Vesting", async ([owner, ...accounts]) => {
   });
 
   it("setCrunch(address)", async () => {
-    const nulled = "0x0000000000000000000000000000000000000000";
-    const dummy = "0x4242424242424242424242424242424242424242";
-
     /* not the owner */
     await expect(selling.setCrunch(dummy, { from: accounts[0] })).to.be
       .rejected;
@@ -124,9 +127,6 @@ contract("Crunch Vesting", async ([owner, ...accounts]) => {
   });
 
   it("setUsdc(address)", async () => {
-    const nulled = "0x0000000000000000000000000000000000000000";
-    const dummy = "0x4242424242424242424242424242424242424242";
-
     /* not the owner */
     await expect(selling.setUsdc(dummy, { from: accounts[0] })).to.be.rejected;
 
@@ -134,7 +134,7 @@ contract("Crunch Vesting", async ([owner, ...accounts]) => {
     await expect(selling.setUsdc(nulled)).to.be.rejected;
 
     /* same address */
-    await expect(selling.setUsdc(crunch.address)).to.be.rejected;
+    await expect(selling.setUsdc(usdc.address)).to.be.rejected;
 
     await expect(selling.setUsdc(dummy)).to.be.fulfilled;
 
