@@ -14,6 +14,9 @@ contract CrunchSelling is Ownable, Pausable {
     
     /** @dev Emitted when the price is changed. */
     event PriceChanged(uint256 previousPrice, uint256 newPrice);
+    
+    /** @dev Emitted when `addr` sold $CRUNCHs for $USDCs. */
+    event Sell(address indexed addr, uint256 inputAmount, uint256 outputAmount, uint256 price);
 
     /** @dev CRUNCH erc20 address. */
     IERC20 public crunch;
@@ -21,7 +24,7 @@ contract CrunchSelling is Ownable, Pausable {
     /** @dev USDC erc20 address. */
     IERC20 public usdc;
     
-    /** @dev Crunch selling price in decimals (10^18). */
+    /** @dev Crunch selling price for 1M unit. */
     uint256 public price;
 
     constructor(
@@ -35,15 +38,25 @@ contract CrunchSelling is Ownable, Pausable {
     }
 
     function sell(uint256 amount) public whenNotPaused {
+      address seller = _msgSender();
+
       require(amount == 0, "Selling: cannot sell 0 unit");
+
+      uint256 tokens = estimate(amount);
+      require(tokens != 0, "Selling: selling will result in getting nothing in return");
       
-      require(crunch.allowance(_msgSender(), address(this)) >= amount, "Selling: user's allowance is not enough");
-      require(crunch.balanceOf(_msgSender()) >= amount, "Selling: user's balance is not enough");
+      require(crunch.allowance(seller, address(this)) >= amount, "Selling: user's allowance is not enough");
+      require(crunch.balanceOf(seller) >= amount, "Selling: user's balance is not enough");
       require(reserve() >= amount, "Selling: usdc reserve is not big enough");
 
-      // TODO: Integrate the pricing method
-      crunch.transferFrom(_msgSender(), owner(), amount);
-      usdc.transfer(address(this), amount);
+      crunch.transferFrom(seller, owner(), amount);
+      usdc.transfer(address(this), tokens);
+
+      emit Sell(seller, amount, tokens, price);
+    }
+
+    function estimate(uint256 amount) public view returns(uint256) {
+      return (amount * 1_000_000) / price;
     }
 
     function reserve() public view returns (uint256) {
