@@ -110,7 +110,7 @@ contract CrunchSelling is Ownable, Pausable {
     function setPrice(uint256 newPrice) onlyOwner public {
         require(
             newPrice != price,
-            "Selling: new usdc address cannot be the same as the previous one"
+            "Selling: new price cannot be the same as the previous one"
         );
 
         uint256 previous = price;
