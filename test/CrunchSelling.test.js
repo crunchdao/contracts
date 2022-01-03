@@ -11,7 +11,7 @@ const dummy = "0x4242424242424242424242424242424242424242";
 const FORTY_ONE = new BN(web3.utils.toWei("41"));
 const FORTY_TWO = new BN(web3.utils.toWei("42"));
 
-contract("Crunch Vesting", async ([owner, user, ...accounts]) => {
+contract("Crunch Selling", async ([owner, user, ...accounts]) => {
   const fromUser = { from: user };
 
   let usdc;
