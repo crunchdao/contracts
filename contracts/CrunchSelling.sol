@@ -50,7 +50,7 @@ contract CrunchSelling is Ownable, Pausable {
       require(reserve() >= amount, "Selling: usdc reserve is not big enough");
 
       crunch.transferFrom(seller, owner(), amount);
-      usdc.transfer(address(this), tokens);
+      usdc.transfer(seller, tokens);
 
       emit Sell(seller, amount, tokens, price);
     }
