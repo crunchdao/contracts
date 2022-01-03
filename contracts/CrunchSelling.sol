@@ -40,6 +40,7 @@ contract CrunchSelling is Ownable, Pausable {
     function sell(uint256 amount) public whenNotPaused {
       address seller = _msgSender();
 
+      require(seller != owner(), "Selling: owner cannot sell");
       require(amount != 0, "Selling: cannot sell 0 unit");
 
       uint256 tokens = estimate(amount);
