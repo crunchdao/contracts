@@ -161,6 +161,25 @@ contract("Crunch Selling", async ([owner, user, ...accounts]) => {
     await expect(selling.reserve()).to.eventually.be.a.bignumber.equal(amount);
   });
 
+  it("emptyReserve()", async () => {
+    const amount = new BN(1000);
+
+    await expect(selling.emptyReserve()).to.be.rejected;
+
+    await expect(usdc.mint(selling.address, amount)).to.be.fulfilled;
+
+    /* only owner */
+    await expect(selling.emptyReserve(fromUser)).to.be.rejected;
+
+    await expect(selling.emptyReserve()).to.be.fulfilled;
+    await expect(
+      usdc.balanceOf(selling.address)
+    ).to.eventually.be.a.bignumber.equal(new BN(0));
+    await expect(usdc.balanceOf(owner)).to.eventually.be.a.bignumber.equal(
+      amount
+    );
+  });
+
   it("pause()", async () => {
     await expect(selling.pause({ from: accounts[0] })).to.be.rejected;
 
