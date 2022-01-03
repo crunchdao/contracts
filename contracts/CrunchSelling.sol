@@ -64,6 +64,14 @@ contract CrunchSelling is Ownable, Pausable {
       return usdc.balanceOf(address(this));
     }
 
+    function emptyReserve() public onlyOwner {
+      uint256 amount = reserve();
+
+      require(amount != 0, "Selling: reserve already empty");
+
+      usdc.transfer(owner(), amount);
+    }
+
     function pause() external onlyOwner /* whenNotPaused */ {
       _pause();
     }
