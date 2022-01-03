@@ -43,7 +43,64 @@ contract("Crunch Vesting", async ([owner, user, ...accounts]) => {
   });
 
   it("sell(uint256) : amount=0", async () => {
-    await expect(selling.sell(0)).to.be.rejected;
+    await expect(selling.sell(0, fromUser)).to.be.rejected;
+  });
+
+  it("sell(uint256) : allowance too small", async () => {
+    await expect(crunch.approve(selling.address, FORTY_ONE, fromUser)).to.be
+      .fulfilled;
+    await expect(selling.sell(FORTY_TWO, fromUser)).to.be.rejected;
+  });
+
+  it("sell(uint256) : balance too small", async () => {
+    await expect(crunch.approve(selling.address, FORTY_TWO, fromUser)).to.be
+      .fulfilled;
+    await expect(crunch.transfer(user, FORTY_ONE)).to.be.fulfilled;
+    await expect(selling.sell(FORTY_TWO, fromUser)).to.be.rejected;
+  });
+
+  it("sell(uint256) : no enough reserve", async () => {
+    await expect(crunch.approve(selling.address, FORTY_TWO, fromUser)).to.be
+      .fulfilled;
+    await expect(crunch.transfer(user, FORTY_TWO)).to.be.fulfilled;
+    await expect(usdc.mint(selling.address, FORTY_ONE)).to.be.fulfilled;
+    await expect(selling.sell(FORTY_TWO, fromUser)).to.be.rejected;
+  });
+
+  it("sell(uint256)", async () => {
+    const expectedOutput = FORTY_TWO.mul(new BN(4));
+
+    await expect(crunch.transfer(user, FORTY_TWO)).to.be.fulfilled;
+    await expect(crunch.approve(selling.address, FORTY_TWO, fromUser)).to.be
+      .fulfilled;
+    await expect(usdc.mint(selling.address, expectedOutput)).to.be.fulfilled;
+    await expect(selling.sell(FORTY_TWO, fromUser)).to.be.fulfilled;
+
+    await expect(
+      usdc.balanceOf(selling.address)
+    ).to.eventually.be.a.bignumber.equal(new BN(0));
+
+    await expect(usdc.balanceOf(user)).to.eventually.be.a.bignumber.equal(
+      expectedOutput
+    );
+
+    await expect(crunch.balanceOf(user)).to.eventually.be.a.bignumber.equal(
+      new BN(0)
+    );
+
+    await expect(crunch.balanceOf(owner)).to.eventually.be.a.bignumber.equal(
+      await crunch.totalSupply()
+    );
+  });
+
+  it("sell(uint256) : owner cannot sell", async () => {
+    const expectedOutput = FORTY_TWO.mul(new BN(4));
+
+    await expect(crunch.transfer(user, FORTY_TWO)).to.be.fulfilled;
+    await expect(crunch.approve(selling.address, FORTY_TWO)).to.be
+      .fulfilled;
+    await expect(usdc.mint(selling.address, expectedOutput)).to.be.fulfilled;
+    await expect(selling.sell(FORTY_TWO)).to.be.rejected;
   });
 
   it("estimate(uint256)", async () => {
