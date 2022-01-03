@@ -9,7 +9,7 @@ contract("Crunch Vesting", async ([owner, ...accounts]) => {
   let selling;
 
   const initialAmount = new BN(10000);
-  const initialPrice = new BN(100);
+  const initialPrice = new BN(1_000_000 / 4); /* 4 USD */
 
   beforeEach(async () => {
     crunch = await CrunchToken.new();
@@ -32,6 +32,42 @@ contract("Crunch Vesting", async ([owner, ...accounts]) => {
       initialPrice
     );
     await expect(selling.paused()).to.eventually.be.false;
+  });
+
+  it("sell(uint256) : amount=0", async () => {
+    await expect(selling.sell(0)).to.be.rejected;
+  });
+
+  it("estimate(uint256)", async () => {
+    await expect(selling.estimate(0)).to.eventually.be.a.bignumber.equal(
+      new BN(0)
+    );
+
+    const test = async (priceInUsd, amount, expectedOutput) => {
+      let price = new BN(1000000 / priceInUsd);
+
+      const current = await selling.price();
+      if (!current.eq(price)) {
+        await expect(selling.setPrice(price)).to.be.fulfilled;
+      }
+
+      await expect(
+        selling.estimate(web3.utils.toWei(`${amount}`))
+      ).to.eventually.be.a.bignumber.equal(
+        new BN(web3.utils.toWei(`${expectedOutput}`))
+      );
+    };
+
+    await test(1, 1, 1);
+    await test(1, 100, 100);
+
+    await test(4, 1, 4);
+    await test(4, 100, 400);
+
+    await test(12.8, 1, 12.8);
+    await test(12.8, 100, 1280);
+
+    await test(2.5, 42, 105);
   });
 
   it("reserve()", async () => {
