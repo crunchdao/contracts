@@ -93,12 +93,26 @@ contract("Crunch Selling", async ([owner, user, ...accounts]) => {
     );
   });
 
+  it("sell(uint256) : cannot when paused", async () => {
+    const expectedOutput = FORTY_TWO.mul(new BN(4));
+
+    await expect(crunch.transfer(user, FORTY_TWO)).to.be.fulfilled;
+    await expect(crunch.approve(selling.address, FORTY_TWO, fromUser)).to.be
+      .fulfilled;
+    await expect(usdc.mint(selling.address, expectedOutput)).to.be.fulfilled;
+
+    await expect(selling.pause()).to.be.fulfilled;
+    await expect(selling.sell(FORTY_TWO, fromUser)).to.be.rejected;
+
+    await expect(selling.unpause()).to.be.fulfilled;
+    await expect(selling.sell(FORTY_TWO, fromUser)).to.be.fulfilled;
+  });
+
   it("sell(uint256) : owner cannot sell", async () => {
     const expectedOutput = FORTY_TWO.mul(new BN(4));
 
     await expect(crunch.transfer(user, FORTY_TWO)).to.be.fulfilled;
-    await expect(crunch.approve(selling.address, FORTY_TWO)).to.be
-      .fulfilled;
+    await expect(crunch.approve(selling.address, FORTY_TWO)).to.be.fulfilled;
     await expect(usdc.mint(selling.address, expectedOutput)).to.be.fulfilled;
     await expect(selling.sell(FORTY_TWO)).to.be.rejected;
   });
