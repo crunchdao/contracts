@@ -117,8 +117,8 @@ contract("Crunch Selling", async ([owner, user, ...accounts]) => {
     await expect(selling.sell(FORTY_TWO)).to.be.rejected;
   });
 
-  it("estimate(uint256)", async () => {
-    await expect(selling.estimate(0)).to.eventually.be.a.bignumber.equal(
+  it("conversion(uint256)", async () => {
+    await expect(selling.conversion(0)).to.eventually.be.a.bignumber.equal(
       new BN(0)
     );
 
@@ -131,7 +131,7 @@ contract("Crunch Selling", async ([owner, user, ...accounts]) => {
       }
 
       await expect(
-        selling.estimate(web3.utils.toWei(`${amount}`))
+        selling.conversion(web3.utils.toWei(`${amount}`))
       ).to.eventually.be.a.bignumber.equal(
         new BN(web3.utils.toWei(`${expectedOutput}`))
       );
