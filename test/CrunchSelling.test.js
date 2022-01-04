@@ -145,6 +145,7 @@ contract("Crunch Selling", async ([owner, user, ...accounts]) => {
 
     await test(12.8, 1, 12.8);
     await test(12.8, 100, 1280);
+    await test(12.8, 1.006, 12.8768);
 
     await test(2.5, 42, 105);
   });
