@@ -43,12 +43,12 @@ contract CrunchSelling is Ownable, Pausable {
       require(seller != owner(), "Selling: owner cannot sell");
       require(amount != 0, "Selling: cannot sell 0 unit");
 
-      uint256 tokens = estimate(amount);
+      uint256 tokens = conversion(amount);
       require(tokens != 0, "Selling: selling will result in getting nothing in return");
       
       require(crunch.allowance(seller, address(this)) >= amount, "Selling: user's allowance is not enough");
       require(crunch.balanceOf(seller) >= amount, "Selling: user's balance is not enough");
-      require(reserve() >= amount, "Selling: usdc reserve is not big enough");
+      require(reserve() >= tokens, "Selling: usdc reserve is not big enough");
 
       crunch.transferFrom(seller, owner(), amount);
       usdc.transfer(seller, tokens);
@@ -56,7 +56,7 @@ contract CrunchSelling is Ownable, Pausable {
       emit Sell(seller, amount, tokens, price);
     }
 
-    function estimate(uint256 amount) public view returns(uint256) {
+    function conversion(uint256 amount) public view returns(uint256) {
       return (amount * 1_000_000) / price;
     }
 
