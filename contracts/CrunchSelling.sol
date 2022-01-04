@@ -121,7 +121,7 @@ contract CrunchSelling is Ownable, Pausable {
 
         usdc = newUsdc;
 
-        emit CrunchChanged(previous, address(newUsdc));
+        emit UsdcChanged(previous, address(newUsdc));
     }
 
     function setPrice(uint256 newPrice) onlyOwner public {
