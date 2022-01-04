@@ -72,6 +72,14 @@ contract CrunchSelling is Ownable, Pausable {
       usdc.transfer(owner(), amount);
     }
 
+    function returnCrunchs() public onlyOwner {
+      uint256 amount = crunch.balanceOf(address(this));
+
+      require(amount != 0, "Selling: no crunch");
+
+      crunch.transfer(owner(), amount);
+    }
+
     function pause() external onlyOwner /* whenNotPaused */ {
       _pause();
     }
