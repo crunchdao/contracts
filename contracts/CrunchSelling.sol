@@ -51,6 +51,23 @@ contract CrunchSelling is Ownable, Pausable, IERC677Receiver {
         setPrice(initialPrice);
     }
 
+    /**
+     * Sell `amount` CRUNCH to USDC.
+     *
+     * Emits a {Sell} event.
+     *
+     * Requirements:
+     * - caller's CRUNCH allowance is greater or equal to `amount`.
+     * - caller's CRUNCH balance is greater or equal to `amount`.
+     * - the contract must not be paused.
+     * - caller is not the owner.
+     * - `amount` is not zero.
+     * - the reserve has enough USDC after conversion.
+     *
+     * @dev the implementation use a {IERC20-transferFrom(address, address, uint256)} call to transfer the CRUNCH from the caller to the owner.
+     *
+     * @param amount CRUNCH amount to sell.
+     */
     function sell(uint256 amount) public whenNotPaused {
         address seller = _msgSender();
 
@@ -62,11 +79,26 @@ contract CrunchSelling is Ownable, Pausable, IERC677Receiver {
             crunch.balanceOf(seller) >= amount,
             "Selling: user's balance is not enough"
         );
+
         crunch.transferFrom(seller, owner(), amount);
 
         _sell(seller, amount);
     }
 
+    /**
+     * Sell `amount` CRUNCH to USDC from a `transferAndCall`, avoiding the usage of an `approve` call.
+     *
+     * Emits a {Sell} event.
+     *
+     * Requirements:
+     * - caller must be the crunch token.
+     * - the contract must not be paused.
+     * - `sender` is not the owner.
+     * - `amount` is not zero.
+     * - the reserve has enough USDC after conversion.
+     *
+     * @dev the implementation use a {IERC20-transfer(address, uint256)} call to transfer the received CRUNCH to the owner.
+     */
     function onTokenTransfer(
         address sender,
         uint256 value,
@@ -74,33 +106,62 @@ contract CrunchSelling is Ownable, Pausable, IERC677Receiver {
     ) external override onlyCrunch whenNotPaused {
         data; /* silence unused */
 
+        crunch.transfer(owner(), value);
+
         _sell(sender, value);
     }
 
+    /**
+     * Internal selling function.
+     *
+     * Emits a {Sell} event.
+     *
+     * Requirements:
+     * - `seller` is not the owner.
+     * - `amount` is not zero.
+     * - the reserve has enough USDC after conversion.
+     *
+     * @param seller seller address.
+     * @param amount CRUNCH amount to sell.
+     */
     function _sell(address seller, uint256 amount) internal {
         require(seller != owner(), "Selling: owner cannot sell");
         require(amount != 0, "Selling: cannot sell 0 unit");
 
         uint256 tokens = conversion(amount);
-        require(
-            tokens != 0,
-            "Selling: selling will result in getting nothing in return"
-        );
-        require(reserve() >= tokens, "Selling: usdc reserve is not big enough");
+        require(tokens != 0, "Selling: selling will result in getting nothing");
+        require(reserve() >= tokens, "Selling: reserve is not big enough");
 
         usdc.transfer(seller, tokens);
 
         emit Sell(seller, amount, tokens, price);
     }
 
-    function conversion(uint256 inputAmount) public view returns (uint256 outputAmount) {
+    /**
+     * @dev convert a value in CRUNCH to USDC using the current price.
+     *
+     * @param inputAmount input value to convert.
+     * @return outputAmount the converted amount.
+     */
+    function conversion(uint256 inputAmount)
+        public
+        view
+        returns (uint256 outputAmount)
+    {
         return (inputAmount * price) / oneCrunch;
     }
 
+    /** @return the USDC balance of the contract. */
     function reserve() public view returns (uint256) {
         return usdc.balanceOf(address(this));
     }
 
+    /**
+     * Empty the USDC reserve.
+     *
+     * Requirements:
+     * - caller must be the owner.
+     */
     function emptyReserve() public onlyOwner {
         uint256 amount = reserve();
 
@@ -109,6 +170,12 @@ contract CrunchSelling is Ownable, Pausable, IERC677Receiver {
         usdc.transfer(owner(), amount);
     }
 
+    /**
+     * Empty the USDC reserve.
+     *
+     * Requirements:
+     * - caller must be the owner.
+     */
     function returnCrunchs() public onlyOwner {
         uint256 amount = crunch.balanceOf(address(this));
 
@@ -117,6 +184,13 @@ contract CrunchSelling is Ownable, Pausable, IERC677Receiver {
         crunch.transfer(owner(), amount);
     }
 
+    /**
+     * Pause the contract.
+     *
+     * Requirements:
+     * - caller must be the owner.
+     * - contract must not already be paused.
+     */
     function pause()
         external
         onlyOwner /* whenNotPaused */
@@ -124,6 +198,13 @@ contract CrunchSelling is Ownable, Pausable, IERC677Receiver {
         _pause();
     }
 
+    /**
+     * Unpause the contract.
+     *
+     * Requirements:
+     * - caller must be the owner.
+     * - contract must be already paused.
+     */
     function unpause()
         external
         onlyOwner /* whenPaused */
@@ -131,6 +212,18 @@ contract CrunchSelling is Ownable, Pausable, IERC677Receiver {
         _unpause();
     }
 
+    /**
+     * Update the CRUNCH token address.
+     *
+     * Emits a {CrunchChanged} event.
+     *
+     * Requirements:
+     * - caller must be the owner.
+     *
+     * @dev this will update the `oneCrunch` value.
+     *
+     * @param newCrunch new CRUNCH address.
+     */
     function setCrunch(address newCrunch) public onlyOwner {
         address previous = address(crunch);
 
@@ -140,6 +233,16 @@ contract CrunchSelling is Ownable, Pausable, IERC677Receiver {
         emit CrunchChanged(previous, newCrunch);
     }
 
+    /**
+     * Update the USDC token address.
+     *
+     * Emits a {UsdcChanged} event.
+     *
+     * Requirements:
+     * - caller must be the owner.
+     *
+     * @param newUsdc new USDC address.
+     */
     function setUsdc(address newUsdc) public onlyOwner {
         address previous = address(usdc);
 
@@ -148,6 +251,16 @@ contract CrunchSelling is Ownable, Pausable, IERC677Receiver {
         emit UsdcChanged(previous, address(newUsdc));
     }
 
+    /**
+     * Update the price.
+     *
+     * Emits a {PriceChanged} event.
+     *
+     * Requirements:
+     * - caller must be the owner.
+     *
+     * @param newPrice new price value.
+     */
     function setPrice(uint256 newPrice) public onlyOwner {
         uint256 previous = price;
 
