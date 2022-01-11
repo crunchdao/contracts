@@ -35,8 +35,11 @@ contract CrunchSelling is Ownable, Pausable, IERC677Receiver {
     /** @dev USDC erc20 address. */
     IERC20 public usdc;
 
-    /** @dev Crunch selling price for 1M unit. */
+    /** @dev How much USDC must be exchanged for 1 CRUNCH. */
     uint256 public price;
+
+    /** @dev Cached value of 1 CRUNCH (1**18). */
+    uint256 public oneCrunch;
 
     constructor(
         address _crunch,
@@ -91,9 +94,7 @@ contract CrunchSelling is Ownable, Pausable, IERC677Receiver {
     }
 
     function conversion(uint256 inputAmount) public view returns (uint256 outputAmount) {
-        uint256 one = 10**crunch.decimals();
-
-        return (inputAmount * price) / one;
+        return (inputAmount * price) / oneCrunch;
     }
 
     function reserve() public view returns (uint256) {
@@ -134,6 +135,7 @@ contract CrunchSelling is Ownable, Pausable, IERC677Receiver {
         address previous = address(crunch);
 
         crunch = IERC20Metadata(newCrunch);
+        oneCrunch = 10**crunch.decimals();
 
         emit CrunchChanged(previous, newCrunch);
     }
