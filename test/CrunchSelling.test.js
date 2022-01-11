@@ -230,6 +230,32 @@ contract("Crunch Selling", async ([owner, user, ...accounts]) => {
     );
   });
 
+  it("returnCrunchs()", async () => {
+    const totalSupply = await crunch.totalSupply();
+
+    await expect(selling.returnCrunchs()).to.be.rejectedWith(
+      Error,
+      "Selling: no crunch"
+    );
+
+    await expect(crunch.transfer(selling.address, totalSupply)).to.be.fulfilled;
+
+    await expect(selling.returnCrunchs(fromUser)).to.be.rejectedWith(
+      Error,
+      "Ownable: caller is not the owner"
+    );
+
+    await expect(selling.returnCrunchs()).to.be.fulfilled;
+
+    await expect(
+      crunch.balanceOf(selling.address)
+    ).to.eventually.be.a.bignumber.equal(ZERO);
+
+    await expect(crunch.balanceOf(owner)).to.eventually.be.a.bignumber.equal(
+      totalSupply
+    );
+  });
+
   it("pause()", async () => {
     await expect(selling.pause(fromUser)).to.be.rejectedWith(
       Error,
