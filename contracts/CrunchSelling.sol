@@ -4,6 +4,7 @@ pragma solidity ^0.8.2;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 import "./erc677/IERC677Receiver.sol";
 
@@ -29,7 +30,7 @@ contract CrunchSelling is Ownable, Pausable, IERC677Receiver {
     );
 
     /** @dev CRUNCH erc20 address. */
-    IERC20 public crunch;
+    IERC20Metadata public crunch;
 
     /** @dev USDC erc20 address. */
     IERC20 public usdc;
@@ -38,8 +39,8 @@ contract CrunchSelling is Ownable, Pausable, IERC677Receiver {
     uint256 public price;
 
     constructor(
-        IERC20 _crunch,
-        IERC20 _usdc,
+        address _crunch,
+        address _usdc,
         uint256 initialPrice
     ) {
         setCrunch(_crunch);
@@ -89,8 +90,10 @@ contract CrunchSelling is Ownable, Pausable, IERC677Receiver {
         emit Sell(seller, amount, tokens, price);
     }
 
-    function conversion(uint256 amount) public view returns (uint256) {
-        return (amount * 1_000_000) / price;
+    function conversion(uint256 inputAmount) public view returns (uint256 outputAmount) {
+        uint256 one = 10**crunch.decimals();
+
+        return (inputAmount * price) / one;
     }
 
     function reserve() public view returns (uint256) {
@@ -127,48 +130,23 @@ contract CrunchSelling is Ownable, Pausable, IERC677Receiver {
         _unpause();
     }
 
-    function setCrunch(IERC20 newCrunch) public onlyOwner {
-        require(
-            address(newCrunch) != address(0),
-            "Selling: new crunch address cannot be zero"
-        );
-
-        require(
-            address(newCrunch) != address(crunch),
-            "Selling: new crunch address cannot be the same as the previous one"
-        );
-
+    function setCrunch(address newCrunch) public onlyOwner {
         address previous = address(crunch);
 
-        crunch = newCrunch;
+        crunch = IERC20Metadata(newCrunch);
 
-        emit CrunchChanged(previous, address(newCrunch));
+        emit CrunchChanged(previous, newCrunch);
     }
 
-    function setUsdc(IERC20 newUsdc) public onlyOwner {
-        require(
-            address(newUsdc) != address(0),
-            "Selling: new usdc address cannot be zero"
-        );
-
-        require(
-            address(newUsdc) != address(usdc),
-            "Selling: new usdc address cannot be the same as the previous one"
-        );
-
+    function setUsdc(address newUsdc) public onlyOwner {
         address previous = address(usdc);
 
-        usdc = newUsdc;
+        usdc = IERC20(newUsdc);
 
         emit UsdcChanged(previous, address(newUsdc));
     }
 
     function setPrice(uint256 newPrice) public onlyOwner {
-        require(
-            newPrice != price,
-            "Selling: new price cannot be the same as the previous one"
-        );
-
         uint256 previous = price;
 
         price = newPrice;
@@ -181,7 +159,6 @@ contract CrunchSelling is Ownable, Pausable, IERC677Receiver {
             address(crunch) == _msgSender(),
             "Selling: caller is not the crunch token"
         );
-
         _;
     }
 }
