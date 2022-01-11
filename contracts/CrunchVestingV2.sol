@@ -6,7 +6,6 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract CrunchVestingV2 is Ownable {
     event TokensReleased(uint256 amount);
-    event TokenVestingRevoked();
     event CrunchTokenUpdate(address indexed previousCrunchToken, address indexed newCrunchToken);
     event BeneficiaryTransferred(address indexed previousBeneficiary, address indexed newBeneficiary);
 
@@ -26,18 +25,11 @@ contract CrunchVestingV2 is Ownable {
     /** the amount of the token released. */
     uint256 public released;
 
-    /** true if the vesting can be revoked. */
-    bool public revokable;
-
-    /** true if the vesting has been revoked. */
-    bool public revoked;
-
     constructor(
         IERC20 _crunch,
         address _beneficiary,
         uint256 _cliffDuration,
-        uint256 _duration,
-        bool _revokable
+        uint256 _duration
     ) {
         require(
             _beneficiary != address(0),
@@ -54,7 +46,6 @@ contract CrunchVestingV2 is Ownable {
         start = block.timestamp;
         cliff = start + _cliffDuration;
         duration = _duration;
-        revokable = _revokable;
     }
 
     /** @notice Transfers vested tokens to beneficiary. */
@@ -70,23 +61,6 @@ contract CrunchVestingV2 is Ownable {
         emit TokensReleased(unreleased);
     }
 
-    /** @notice Allows the owner to revoke the vesting. Tokens already vested remain in the contract, the rest are returned to the owner. */
-    function revoke() public onlyOwner {
-        require(revokable, "Vesting: token not revokable");
-        require(!revoked, "Vesting: token already revoked");
-
-        uint256 balance = crunch.balanceOf(address(this));
-
-        uint256 unreleased = releasableAmount();
-        uint256 refund = balance - unreleased;
-
-        revoked = true;
-
-        crunch.transfer(owner(), refund);
-
-        emit TokenVestingRevoked();
-    }
-
     /** @dev Calculates the amount that has already vested but hasn't been released yet. */
     function releasableAmount() public view returns (uint256) {
         return vestedAmount() - released;
@@ -99,7 +73,7 @@ contract CrunchVestingV2 is Ownable {
 
         if (block.timestamp < cliff) {
             return 0;
-        } else if ((block.timestamp >= start + duration) || revoked) {
+        } else if ((block.timestamp >= start + duration)) {
             return totalBalance;
         } else {
             return (totalBalance * (block.timestamp - start)) / duration;
