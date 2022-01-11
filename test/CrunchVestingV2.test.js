@@ -22,8 +22,7 @@ contract("Crunch Vesting", async (accounts) => {
       crunch.address,
       beneficiary,
       hourInSeconds(cliffInHour),
-      hourInSeconds(durationInHour),
-      true
+      hourInSeconds(durationInHour)
     );
 
     await crunch.transfer(vesting.address, amount);
