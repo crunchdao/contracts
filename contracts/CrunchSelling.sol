@@ -272,7 +272,7 @@ contract CrunchSelling is Ownable, Pausable, IERC677Receiver {
     modifier onlyCrunch() {
         require(
             address(crunch) == _msgSender(),
-            "Selling: caller is not the crunch token"
+            "Selling: caller must be the crunch token"
         );
         _;
     }
