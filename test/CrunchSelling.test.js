@@ -5,11 +5,9 @@ const CrunchToken = artifacts.require("CrunchToken");
 const CrunchSelling = artifacts.require("CrunchSelling");
 const USDCoin = artifacts.require("USDCoin");
 
-const nulled = "0x0000000000000000000000000000000000000000";
-const dummy = "0x4242424242424242424242424242424242424242";
-
 const FORTY_ONE = new BN(web3.utils.toWei("41"));
 const FORTY_TWO = new BN(web3.utils.toWei("42"));
+const ZERO = new BN("0");
 
 contract("Crunch Selling", async ([owner, user, ...accounts]) => {
   const fromUser = { from: user };
@@ -18,13 +16,13 @@ contract("Crunch Selling", async ([owner, user, ...accounts]) => {
   let crunch;
   let selling;
 
-  const initialPrice = new BN(1_000_000 / 4); /* 4 USD */
+  const initialPriceInteger = new BN("4");
+  const initialPrice = new BN(web3.utils.toWei(initialPriceInteger));
 
   beforeEach(async () => {
     crunch = await CrunchToken.new();
     usdc = await USDCoin.new();
 
-    /* using the crunch as a fake usdc */
     selling = await CrunchSelling.new(
       crunch.address,
       usdc.address,
@@ -40,56 +38,51 @@ contract("Crunch Selling", async ([owner, user, ...accounts]) => {
       initialPrice
     );
     await expect(selling.paused()).to.eventually.be.false;
+    await expect(selling.oneCrunch()).to.eventually.be.a.bignumber.equal(
+      new BN(web3.utils.toWei("1"))
+    );
   });
 
   it("sell(uint256) : amount=0", async () => {
-    await expect(selling.sell(0, fromUser)).to.be.rejected;
+    await expect(selling.sell(0, fromUser)).to.be.rejectedWith(
+      Error,
+      "Selling: cannot sell 0 unit"
+    );
   });
 
   it("sell(uint256) : allowance too small", async () => {
     await expect(crunch.approve(selling.address, FORTY_ONE, fromUser)).to.be
       .fulfilled;
-    await expect(selling.sell(FORTY_TWO, fromUser)).to.be.rejected;
+
+    await expect(selling.sell(FORTY_TWO, fromUser)).to.be.rejectedWith(
+      Error,
+      "Selling: user's allowance is not enough"
+    );
   });
 
   it("sell(uint256) : balance too small", async () => {
     await expect(crunch.approve(selling.address, FORTY_TWO, fromUser)).to.be
       .fulfilled;
+
     await expect(crunch.transfer(user, FORTY_ONE)).to.be.fulfilled;
-    await expect(selling.sell(FORTY_TWO, fromUser)).to.be.rejected;
+
+    await expect(selling.sell(FORTY_TWO, fromUser)).to.be.rejectedWith(
+      Error,
+      "Selling: user's balance is not enough"
+    );
   });
 
   it("sell(uint256) : no enough reserve", async () => {
     await expect(crunch.approve(selling.address, FORTY_TWO, fromUser)).to.be
       .fulfilled;
+
     await expect(crunch.transfer(user, FORTY_TWO)).to.be.fulfilled;
+
     await expect(usdc.mint(selling.address, FORTY_ONE)).to.be.fulfilled;
-    await expect(selling.sell(FORTY_TWO, fromUser)).to.be.rejected;
-  });
 
-  it("sell(uint256)", async () => {
-    const expectedOutput = FORTY_TWO.mul(new BN(4));
-
-    await expect(crunch.transfer(user, FORTY_TWO)).to.be.fulfilled;
-    await expect(crunch.approve(selling.address, FORTY_TWO, fromUser)).to.be
-      .fulfilled;
-    await expect(usdc.mint(selling.address, expectedOutput)).to.be.fulfilled;
-    await expect(selling.sell(FORTY_TWO, fromUser)).to.be.fulfilled;
-
-    await expect(
-      usdc.balanceOf(selling.address)
-    ).to.eventually.be.a.bignumber.equal(new BN(0));
-
-    await expect(usdc.balanceOf(user)).to.eventually.be.a.bignumber.equal(
-      expectedOutput
-    );
-
-    await expect(crunch.balanceOf(user)).to.eventually.be.a.bignumber.equal(
-      new BN(0)
-    );
-
-    await expect(crunch.balanceOf(owner)).to.eventually.be.a.bignumber.equal(
-      await crunch.totalSupply()
+    await expect(selling.sell(FORTY_TWO, fromUser)).to.be.rejectedWith(
+      Error,
+      "Selling: reserve is not big enough"
     );
   });
 
@@ -97,8 +90,10 @@ contract("Crunch Selling", async ([owner, user, ...accounts]) => {
     const expectedOutput = FORTY_TWO.mul(new BN(4));
 
     await expect(crunch.transfer(user, FORTY_TWO)).to.be.fulfilled;
+
     await expect(crunch.approve(selling.address, FORTY_TWO, fromUser)).to.be
       .fulfilled;
+
     await expect(usdc.mint(selling.address, expectedOutput)).to.be.fulfilled;
 
     await expect(selling.pause()).to.be.fulfilled;
@@ -112,18 +107,59 @@ contract("Crunch Selling", async ([owner, user, ...accounts]) => {
     const expectedOutput = FORTY_TWO.mul(new BN(4));
 
     await expect(crunch.transfer(user, FORTY_TWO)).to.be.fulfilled;
+
     await expect(crunch.approve(selling.address, FORTY_TWO)).to.be.fulfilled;
+
     await expect(usdc.mint(selling.address, expectedOutput)).to.be.fulfilled;
-    await expect(selling.sell(FORTY_TWO)).to.be.rejected;
+
+    await expect(selling.sell(FORTY_TWO)).to.be.rejectedWith(
+      Error,
+      "Selling: owner cannot sell"
+    );
+  });
+
+  it("sell(uint256)", async () => {
+    const expectedOutput = FORTY_TWO.mul(initialPriceInteger);
+
+    await expect(crunch.transfer(user, FORTY_TWO)).to.be.fulfilled;
+
+    await expect(crunch.approve(selling.address, FORTY_TWO, fromUser)).to.be
+      .fulfilled;
+
+    await expect(usdc.mint(selling.address, expectedOutput)).to.be.fulfilled;
+
+    await expect(selling.sell(FORTY_TWO, fromUser)).to.be.fulfilled;
+
+    await expect(
+      usdc.balanceOf(selling.address)
+    ).to.eventually.be.a.bignumber.equal(ZERO);
+
+    await expect(usdc.balanceOf(user)).to.eventually.be.a.bignumber.equal(
+      expectedOutput
+    );
+
+    await expect(crunch.balanceOf(user)).to.eventually.be.a.bignumber.equal(
+      ZERO
+    );
+
+    await expect(crunch.balanceOf(owner)).to.eventually.be.a.bignumber.equal(
+      await crunch.totalSupply()
+    );
+  });
+
+  it("onTokenTransfer(address, uint256, bytes) : not from crunch", async () => {
+    await expect(
+      selling.onTokenTransfer(owner, FORTY_TWO, [])
+    ).to.be.rejectedWith(Error, "Selling: caller must be the crunch token");
   });
 
   it("conversion(uint256)", async () => {
     await expect(selling.conversion(0)).to.eventually.be.a.bignumber.equal(
-      new BN(0)
+      ZERO
     );
 
     const test = async (priceInUsd, amount, expectedOutput) => {
-      let price = new BN(1000000 / priceInUsd);
+      let price = new BN(web3.utils.toWei(`${priceInUsd}`));
 
       const current = await selling.price();
       if (!current.eq(price)) {
@@ -137,8 +173,16 @@ contract("Crunch Selling", async ([owner, user, ...accounts]) => {
       );
     };
 
+    await test(1, 0, 0);
+
     await test(1, 1, 1);
     await test(1, 100, 100);
+
+    await test(2.4, 1, 2.4);
+    await test(2.4, 100, 240);
+
+    await test(2.5, 42, 105);
+    await test(2.5, 9999, 24997.5);
 
     await test(4, 1, 4);
     await test(4, 100, 400);
@@ -147,15 +191,13 @@ contract("Crunch Selling", async ([owner, user, ...accounts]) => {
     await test(12.8, 100, 1280);
     await test(12.8, 1.006, 12.8768);
 
-    await test(2.5, 42, 105);
+    await test(123456.789, 99.99, 12344444.33211);
   });
 
   it("reserve()", async () => {
     const amount = new BN(1000);
 
-    await expect(selling.reserve()).to.eventually.be.a.bignumber.equal(
-      new BN(0)
-    );
+    await expect(selling.reserve()).to.eventually.be.a.bignumber.equal(ZERO);
 
     await expect(usdc.mint(selling.address, amount)).to.be.fulfilled;
 
@@ -165,82 +207,93 @@ contract("Crunch Selling", async ([owner, user, ...accounts]) => {
   it("emptyReserve()", async () => {
     const amount = new BN(1000);
 
-    await expect(selling.emptyReserve()).to.be.rejected;
+    await expect(selling.emptyReserve()).to.be.rejectedWith(
+      Error,
+      "Selling: reserve already empty"
+    );
 
     await expect(usdc.mint(selling.address, amount)).to.be.fulfilled;
 
-    /* only owner */
-    await expect(selling.emptyReserve(fromUser)).to.be.rejected;
+    await expect(selling.emptyReserve(fromUser)).to.be.rejectedWith(
+      Error,
+      "Ownable: caller is not the owner"
+    );
 
     await expect(selling.emptyReserve()).to.be.fulfilled;
+
     await expect(
       usdc.balanceOf(selling.address)
-    ).to.eventually.be.a.bignumber.equal(new BN(0));
+    ).to.eventually.be.a.bignumber.equal(ZERO);
+
     await expect(usdc.balanceOf(owner)).to.eventually.be.a.bignumber.equal(
       amount
     );
   });
 
   it("pause()", async () => {
-    await expect(selling.pause({ from: accounts[0] })).to.be.rejected;
+    await expect(selling.pause(fromUser)).to.be.rejectedWith(
+      Error,
+      "Ownable: caller is not the owner"
+    );
 
     await expect(selling.pause()).to.be.fulfilled;
 
     await expect(selling.paused()).to.eventually.be.true;
 
-    await expect(selling.pause()).to.be.rejected;
+    await expect(selling.pause()).to.be.rejectedWith(Error, "Pausable: paused");
   });
 
   it("unpause()", async () => {
     await expect(selling.pause()).to.be.fulfilled;
 
-    await expect(selling.unpause({ from: accounts[0] })).to.be.rejected;
+    await expect(selling.unpause(fromUser)).to.be.rejectedWith(
+      Error,
+      "Ownable: caller is not the owner"
+    );
 
     await expect(selling.unpause()).to.be.fulfilled;
 
     await expect(selling.paused()).to.eventually.be.false;
+
+    await expect(selling.unpause()).to.be.rejectedWith(
+      Error,
+      "Pausable: not paused"
+    );
   });
 
   it("setCrunch(address)", async () => {
-    /* not the owner */
-    await expect(selling.setCrunch(dummy, { from: accounts[0] })).to.be
-      .rejected;
+    const dummy = await CrunchToken.new();
 
-    /* null address */
-    await expect(selling.setCrunch(nulled)).to.be.rejected;
+    await expect(selling.setCrunch(dummy.address, fromUser)).to.be.rejectedWith(
+      Error,
+      "Ownable: caller is not the owner"
+    );
 
-    /* same address */
-    await expect(selling.setCrunch(crunch.address)).to.be.rejected;
+    await expect(selling.setCrunch(dummy.address)).to.be.fulfilled;
 
-    await expect(selling.setCrunch(dummy)).to.be.fulfilled;
-
-    await expect(selling.crunch()).to.eventually.be.equal(dummy);
+    await expect(selling.crunch()).to.eventually.be.equal(dummy.address);
   });
 
   it("setUsdc(address)", async () => {
-    /* not the owner */
-    await expect(selling.setUsdc(dummy, { from: accounts[0] })).to.be.rejected;
+    const dummy = await USDCoin.new();
 
-    /* null address */
-    await expect(selling.setUsdc(nulled)).to.be.rejected;
+    await expect(selling.setUsdc(dummy.address, fromUser)).to.be.rejectedWith(
+      Error,
+      "Ownable: caller is not the owner"
+    );
 
-    /* same address */
-    await expect(selling.setUsdc(usdc.address)).to.be.rejected;
+    await expect(selling.setUsdc(dummy.address)).to.be.fulfilled;
 
-    await expect(selling.setUsdc(dummy)).to.be.fulfilled;
-
-    await expect(selling.usdc()).to.eventually.be.equal(dummy);
+    await expect(selling.usdc()).to.eventually.be.equal(dummy.address);
   });
 
   it("setPrice(uint256)", async () => {
-    const newPrice = new BN(42);
+    const newPrice = FORTY_TWO;
 
-    /* not the owner */
-    await expect(selling.setPrice(newPrice, { from: accounts[0] })).to.be
-      .rejected;
-
-    /* same price */
-    await expect(selling.setPrice(initialPrice)).to.be.rejected;
+    await expect(selling.setPrice(newPrice, fromUser)).to.be.rejectedWith(
+      Error,
+      "Ownable: caller is not the owner"
+    );
 
     await expect(selling.setPrice(newPrice)).to.be.fulfilled;
 
