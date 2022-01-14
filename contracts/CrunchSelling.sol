@@ -248,7 +248,7 @@ contract CrunchSelling is Ownable, Pausable, IERC677Receiver {
 
         usdc = IERC20(newUsdc);
 
-        emit UsdcChanged(previous, address(newUsdc));
+        emit UsdcChanged(previous, newUsdc);
     }
 
     /**
