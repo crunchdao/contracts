@@ -163,11 +163,9 @@ contract CrunchSelling is Ownable, Pausable, IERC677Receiver {
      * - caller must be the owner.
      */
     function emptyReserve() public onlyOwner {
-        uint256 amount = reserve();
+        bool success = _emptyReserve();
 
-        require(amount != 0, "Selling: reserve already empty");
-
-        usdc.transfer(owner(), amount);
+        require(success, "Selling: reserve already empty");
     }
 
     /**
@@ -177,11 +175,9 @@ contract CrunchSelling is Ownable, Pausable, IERC677Receiver {
      * - caller must be the owner.
      */
     function returnCrunchs() public onlyOwner {
-        uint256 amount = crunch.balanceOf(address(this));
+        bool success = _returnCrunchs();
 
-        require(amount != 0, "Selling: no crunch");
-
-        crunch.transfer(owner(), amount);
+        require(success, "Selling: no crunch");
     }
 
     /**
@@ -267,6 +263,35 @@ contract CrunchSelling is Ownable, Pausable, IERC677Receiver {
         price = newPrice;
 
         emit PriceChanged(previous, newPrice);
+    }
+
+    function destroy() external onlyOwner {
+        _emptyReserve();
+        _returnCrunchs();
+
+        selfdestruct(payable(owner()));
+    }
+
+    function _emptyReserve() internal returns (bool) {
+        uint256 amount = reserve();
+
+        if (amount != 0) {
+            usdc.transfer(owner(), amount);
+            return true;
+        }
+
+        return false;
+    }
+
+    function _returnCrunchs() internal returns (bool) {
+        uint256 amount = crunch.balanceOf(address(this));
+
+        if (amount != 0) {
+            crunch.transfer(owner(), amount);
+            return true;
+        }
+
+        return false;
     }
 
     modifier onlyCrunch() {
