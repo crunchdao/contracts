@@ -265,6 +265,13 @@ contract CrunchSelling is Ownable, Pausable, IERC677Receiver {
         emit PriceChanged(previous, newPrice);
     }
 
+    /**
+     * Destroy the contract.
+     * This will send the tokens (CRUNCH and USDC) back to the owner.
+     *
+     * Requirements:
+     * - caller must be the owner.
+     */
     function destroy() external onlyOwner {
         _emptyReserve();
         _returnCrunchs();
@@ -272,6 +279,11 @@ contract CrunchSelling is Ownable, Pausable, IERC677Receiver {
         selfdestruct(payable(owner()));
     }
 
+    /**
+     * Empty the reserve.
+     *
+     * @return true if at least 1 USDC has been transfered, false otherwise.
+     */
     function _emptyReserve() internal returns (bool) {
         uint256 amount = reserve();
 
@@ -283,6 +295,11 @@ contract CrunchSelling is Ownable, Pausable, IERC677Receiver {
         return false;
     }
 
+    /**
+     * Return the CRUNCHs.
+     *
+     * @return true if at least 1 CRUNCH has been transfered, false otherwise.
+     */
     function _returnCrunchs() internal returns (bool) {
         uint256 amount = crunch.balanceOf(address(this));
 
