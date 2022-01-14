@@ -325,4 +325,45 @@ contract("Crunch Selling", async ([owner, user, ...accounts]) => {
 
     await expect(selling.price()).to.eventually.be.a.bignumber.equal(newPrice);
   });
+
+  it("destroy()", async () => {
+    await expect(selling.destroy(fromUser)).to.be.rejectedWith(
+      Error,
+      "Ownable: caller is not the owner"
+    );
+
+    await expect(usdc.mint(selling.address, FORTY_TWO)).to.be.fulfilled;
+    await expect(crunch.transfer(selling.address, FORTY_TWO)).to.be.fulfilled;
+
+    await expect(
+      crunch.balanceOf(selling.address)
+    ).to.eventually.be.a.bignumber.equal(FORTY_TWO);
+
+    await expect(
+      usdc.balanceOf(selling.address)
+    ).to.eventually.be.a.bignumber.equal(FORTY_TWO);
+
+    await expect(selling.destroy()).to.be.fulfilled;
+
+    await expect(
+      crunch.balanceOf(selling.address)
+    ).to.eventually.be.a.bignumber.equal(ZERO);
+
+    await expect(
+      usdc.balanceOf(selling.address)
+    ).to.eventually.be.a.bignumber.equal(ZERO);
+
+    await expect(crunch.balanceOf(owner)).to.eventually.be.a.bignumber.equal(
+      await crunch.totalSupply()
+    );
+
+    await expect(usdc.balanceOf(owner)).to.eventually.be.a.bignumber.equal(
+      FORTY_TWO
+    );
+
+    await expect(selling.owner()).to.be.rejectedWith(
+      Error,
+      "Returned values aren't valid"
+    );
+  });
 });
