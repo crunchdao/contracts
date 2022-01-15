@@ -166,6 +166,7 @@ contract CrunchSelling is Ownable, Pausable, IERC677Receiver {
     function emptyReserve() public onlyOwner whenPaused {
         bool success = _emptyReserve();
 
+        /* prevent useless call */
         require(success, "Selling: reserve already empty");
     }
 
@@ -179,6 +180,7 @@ contract CrunchSelling is Ownable, Pausable, IERC677Receiver {
     function returnCrunchs() public onlyOwner whenPaused {
         bool success = _returnCrunchs();
 
+        /* prevent useless call */
         require(success, "Selling: no crunch");
     }
 
