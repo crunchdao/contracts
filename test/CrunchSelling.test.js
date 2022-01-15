@@ -172,6 +172,8 @@ contract("Crunch Selling", async ([owner, user, ...accounts]) => {
         new BN(web3.utils.toWei(`${expectedOutput}`))
       );
     };
+    
+    await expect(selling.pause()).to.be.fulfilled;
 
     await test(1, 0, 0);
 
@@ -207,17 +209,24 @@ contract("Crunch Selling", async ([owner, user, ...accounts]) => {
   it("emptyReserve()", async () => {
     const amount = new BN(1000);
 
+    await expect(selling.emptyReserve(fromUser)).to.be.rejectedWith(
+      Error,
+      "Ownable: caller is not the owner"
+    );
+
+    await expect(selling.emptyReserve()).to.be.rejectedWith(
+      Error,
+      "Pausable: not paused"
+    );
+
+    await expect(selling.pause()).to.be.fulfilled;
+
     await expect(selling.emptyReserve()).to.be.rejectedWith(
       Error,
       "Selling: reserve already empty"
     );
 
     await expect(usdc.mint(selling.address, amount)).to.be.fulfilled;
-
-    await expect(selling.emptyReserve(fromUser)).to.be.rejectedWith(
-      Error,
-      "Ownable: caller is not the owner"
-    );
 
     await expect(selling.emptyReserve()).to.be.fulfilled;
 
@@ -233,17 +242,24 @@ contract("Crunch Selling", async ([owner, user, ...accounts]) => {
   it("returnCrunchs()", async () => {
     const totalSupply = await crunch.totalSupply();
 
+    await expect(selling.returnCrunchs(fromUser)).to.be.rejectedWith(
+      Error,
+      "Ownable: caller is not the owner"
+    );
+
+    await expect(selling.returnCrunchs()).to.be.rejectedWith(
+      Error,
+      "Pausable: not paused"
+    );
+
+    await expect(selling.pause()).to.be.fulfilled;
+
     await expect(selling.returnCrunchs()).to.be.rejectedWith(
       Error,
       "Selling: no crunch"
     );
 
     await expect(crunch.transfer(selling.address, totalSupply)).to.be.fulfilled;
-
-    await expect(selling.returnCrunchs(fromUser)).to.be.rejectedWith(
-      Error,
-      "Ownable: caller is not the owner"
-    );
 
     await expect(selling.returnCrunchs()).to.be.fulfilled;
 
@@ -295,6 +311,13 @@ contract("Crunch Selling", async ([owner, user, ...accounts]) => {
       "Ownable: caller is not the owner"
     );
 
+    await expect(selling.setCrunch(dummy.address)).to.be.rejectedWith(
+      Error,
+      "Pausable: not paused"
+    );
+
+    await expect(selling.pause()).to.be.fulfilled;
+
     await expect(selling.setCrunch(dummy.address)).to.be.fulfilled;
 
     await expect(selling.crunch()).to.eventually.be.equal(dummy.address);
@@ -307,6 +330,13 @@ contract("Crunch Selling", async ([owner, user, ...accounts]) => {
       Error,
       "Ownable: caller is not the owner"
     );
+
+    await expect(selling.setUsdc(dummy.address)).to.be.rejectedWith(
+      Error,
+      "Pausable: not paused"
+    );
+
+    await expect(selling.pause()).to.be.fulfilled;
 
     await expect(selling.setUsdc(dummy.address)).to.be.fulfilled;
 
@@ -321,6 +351,13 @@ contract("Crunch Selling", async ([owner, user, ...accounts]) => {
       "Ownable: caller is not the owner"
     );
 
+    await expect(selling.setPrice(newPrice)).to.be.rejectedWith(
+      Error,
+      "Pausable: not paused"
+    );
+
+    await expect(selling.pause()).to.be.fulfilled;
+
     await expect(selling.setPrice(newPrice)).to.be.fulfilled;
 
     await expect(selling.price()).to.eventually.be.a.bignumber.equal(newPrice);
@@ -331,6 +368,13 @@ contract("Crunch Selling", async ([owner, user, ...accounts]) => {
       Error,
       "Ownable: caller is not the owner"
     );
+
+    await expect(selling.destroy()).to.be.rejectedWith(
+      Error,
+      "Pausable: not paused"
+    );
+
+    await expect(selling.pause()).to.be.fulfilled;
 
     await expect(usdc.mint(selling.address, FORTY_TWO)).to.be.fulfilled;
     await expect(crunch.transfer(selling.address, FORTY_TWO)).to.be.fulfilled;
