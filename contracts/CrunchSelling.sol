@@ -46,9 +46,9 @@ contract CrunchSelling is Ownable, Pausable, IERC677Receiver {
         address _usdc,
         uint256 initialPrice
     ) {
-        setCrunch(_crunch);
-        setUsdc(_usdc);
-        setPrice(initialPrice);
+        _setCrunch(_crunch);
+        _setUsdc(_usdc);
+        _setPrice(initialPrice);
     }
 
     /**
@@ -161,8 +161,9 @@ contract CrunchSelling is Ownable, Pausable, IERC677Receiver {
      *
      * Requirements:
      * - caller must be the owner.
+     * - the contract must not be paused.
      */
-    function emptyReserve() public onlyOwner {
+    function emptyReserve() public onlyOwner whenPaused {
         bool success = _emptyReserve();
 
         require(success, "Selling: reserve already empty");
@@ -173,8 +174,9 @@ contract CrunchSelling is Ownable, Pausable, IERC677Receiver {
      *
      * Requirements:
      * - caller must be the owner.
+     * - the contract must not be paused.
      */
-    function returnCrunchs() public onlyOwner {
+    function returnCrunchs() public onlyOwner whenPaused {
         bool success = _returnCrunchs();
 
         require(success, "Selling: no crunch");
@@ -215,12 +217,69 @@ contract CrunchSelling is Ownable, Pausable, IERC677Receiver {
      *
      * Requirements:
      * - caller must be the owner.
+     * - the contract must not be paused.
+     *
+     * @param newCrunch new CRUNCH address.
+     */
+    function setCrunch(address newCrunch) external onlyOwner whenPaused {
+        _setCrunch(newCrunch);
+    }
+
+    /**
+     * Update the USDC token address.
+     *
+     * Emits a {UsdcChanged} event.
+     *
+     * Requirements:
+     * - caller must be the owner.
+     * - the contract must not be paused.
+     *
+     * @param newUsdc new USDC address.
+     */
+    function setUsdc(address newUsdc) external onlyOwner whenPaused {
+        _setUsdc(newUsdc);
+    }
+
+    /**
+     * Update the price.
+     *
+     * Emits a {PriceChanged} event.
+     *
+     * Requirements:
+     * - caller must be the owner.
+     * - the contract must not be paused.
+     *
+     * @param newPrice new price value.
+     */
+    function setPrice(uint256 newPrice) external onlyOwner whenPaused {
+        _setPrice(newPrice);
+    }
+
+    /**
+     * Destroy the contract.
+     * This will send the tokens (CRUNCH and USDC) back to the owner.
+     *
+     * Requirements:
+     * - caller must be the owner.
+     * - the contract must not be paused.
+     */
+    function destroy() external onlyOwner whenPaused {
+        _emptyReserve();
+        _returnCrunchs();
+
+        selfdestruct(payable(owner()));
+    }
+
+    /**
+     * Update the CRUNCH token address.
+     *
+     * Emits a {CrunchChanged} event.
      *
      * @dev this will update the `oneCrunch` value.
      *
      * @param newCrunch new CRUNCH address.
      */
-    function setCrunch(address newCrunch) public onlyOwner {
+    function _setCrunch(address newCrunch) internal {
         address previous = address(crunch);
 
         crunch = IERC20Metadata(newCrunch);
@@ -234,12 +293,9 @@ contract CrunchSelling is Ownable, Pausable, IERC677Receiver {
      *
      * Emits a {UsdcChanged} event.
      *
-     * Requirements:
-     * - caller must be the owner.
-     *
      * @param newUsdc new USDC address.
      */
-    function setUsdc(address newUsdc) public onlyOwner {
+    function _setUsdc(address newUsdc) internal {
         address previous = address(usdc);
 
         usdc = IERC20(newUsdc);
@@ -252,31 +308,14 @@ contract CrunchSelling is Ownable, Pausable, IERC677Receiver {
      *
      * Emits a {PriceChanged} event.
      *
-     * Requirements:
-     * - caller must be the owner.
-     *
      * @param newPrice new price value.
      */
-    function setPrice(uint256 newPrice) public onlyOwner {
+    function _setPrice(uint256 newPrice) internal {
         uint256 previous = price;
 
         price = newPrice;
 
         emit PriceChanged(previous, newPrice);
-    }
-
-    /**
-     * Destroy the contract.
-     * This will send the tokens (CRUNCH and USDC) back to the owner.
-     *
-     * Requirements:
-     * - caller must be the owner.
-     */
-    function destroy() external onlyOwner {
-        _emptyReserve();
-        _returnCrunchs();
-
-        selfdestruct(payable(owner()));
     }
 
     /**
