@@ -5,9 +5,10 @@ const CrunchToken = artifacts.require("CrunchToken");
 const CrunchSelling = artifacts.require("CrunchSelling");
 const USDCoin = artifacts.require("USDCoin");
 
+const ZERO = new BN("0");
+const ONE = new BN(web3.utils.toWei("1"));
 const FORTY_ONE = new BN(web3.utils.toWei("41"));
 const FORTY_TWO = new BN(web3.utils.toWei("42"));
-const ZERO = new BN("0");
 
 contract("Crunch Selling", async ([owner, user, ...accounts]) => {
   const fromUser = { from: user };
@@ -72,7 +73,7 @@ contract("Crunch Selling", async ([owner, user, ...accounts]) => {
     );
   });
 
-  it("sell(uint256) : no enough reserve", async () => {
+  it("sell(uint256) : not enough reserve", async () => {
     await expect(crunch.approve(selling.address, FORTY_TWO, fromUser)).to.be
       .fulfilled;
 
@@ -153,6 +154,60 @@ contract("Crunch Selling", async ([owner, user, ...accounts]) => {
     ).to.be.rejectedWith(Error, "Selling: caller must be the crunch token");
   });
 
+  it("crunch.transferAndCall(address, uint256, bytes) : cannot when paused", async () => {
+    await expect(selling.pause()).to.be.fulfilled;
+
+    await expect(
+      crunch.transferAndCall(selling.address, FORTY_TWO, [])
+    ).to.be.rejectedWith(Error, "Pausable: paused");
+  });
+
+  it("crunch.transferAndCall(address, uint256, bytes) : amount=0", async () => {
+    await expect(
+      crunch.transferAndCall(selling.address, ZERO, [], fromUser)
+    ).to.be.rejectedWith(Error, "Selling: cannot sell 0 unit");
+  });
+
+  it("crunch.transferAndCall(address, uint256, bytes) : owner cannot sell", async () => {
+    await expect(
+      crunch.transferAndCall(selling.address, ONE, [])
+    ).to.be.rejectedWith(Error, "Selling: owner cannot sell");
+  });
+
+  it("crunch.transferAndCall(address, uint256, bytes) : not enough reserve", async () => {
+    await expect(crunch.transfer(user, FORTY_TWO)).to.be.fulfilled;
+
+    await expect(usdc.mint(selling.address, FORTY_ONE)).to.be.fulfilled;
+
+    await expect(
+      crunch.transferAndCall(selling.address, FORTY_TWO, [], fromUser)
+    ).to.be.rejectedWith(Error, "Selling: reserve is not big enough");
+  });
+
+  it("crunch.transferAndCall(address, uint256, bytes)", async () => {
+    const expectedOutput = FORTY_TWO.mul(initialPriceInteger);
+
+    await expect(crunch.transfer(user, FORTY_TWO)).to.be.fulfilled;
+
+    await expect(usdc.mint(selling.address, expectedOutput)).to.be.fulfilled;
+
+    await expect(
+      crunch.transferAndCall(selling.address, FORTY_TWO, [], fromUser)
+    ).to.be.fulfilled;
+
+    await expect(crunch.balanceOf(user)).to.eventually.be.a.bignumber.equal(
+      ZERO
+    );
+
+    await expect(usdc.balanceOf(user)).to.eventually.be.a.bignumber.equal(
+      expectedOutput
+    );
+
+    await expect(
+      usdc.balanceOf(selling.address)
+    ).to.eventually.be.a.bignumber.equal(ZERO);
+  });
+
   it("conversion(uint256)", async () => {
     await expect(selling.conversion(0)).to.eventually.be.a.bignumber.equal(
       ZERO
@@ -172,7 +227,7 @@ contract("Crunch Selling", async ([owner, user, ...accounts]) => {
         new BN(web3.utils.toWei(`${expectedOutput}`))
       );
     };
-    
+
     await expect(selling.pause()).to.be.fulfilled;
 
     await test(1, 0, 0);
