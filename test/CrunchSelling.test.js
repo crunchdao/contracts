@@ -228,8 +228,6 @@ contract("Crunch Selling", async ([owner, user, ...accounts]) => {
       );
     };
 
-    await expect(selling.pause()).to.be.fulfilled;
-
     await test(1, 0, 0);
 
     await test(1, 1, 1);
@@ -405,13 +403,6 @@ contract("Crunch Selling", async ([owner, user, ...accounts]) => {
       Error,
       "Ownable: caller is not the owner"
     );
-
-    await expect(selling.setPrice(newPrice)).to.be.rejectedWith(
-      Error,
-      "Pausable: not paused"
-    );
-
-    await expect(selling.pause()).to.be.fulfilled;
 
     await expect(selling.setPrice(newPrice)).to.be.fulfilled;
 
