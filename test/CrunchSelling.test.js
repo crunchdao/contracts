@@ -206,6 +206,10 @@ contract("Crunch Selling", async ([owner, user, ...accounts]) => {
     await expect(
       usdc.balanceOf(selling.address)
     ).to.eventually.be.a.bignumber.equal(ZERO);
+
+    await expect(crunch.balanceOf(owner)).to.eventually.be.a.bignumber.equal(
+      await crunch.totalSupply()
+    );
   });
 
   it("conversion(uint256)", async () => {
