@@ -171,7 +171,8 @@ contract CrunchSelling is Ownable, Pausable, IERC677Receiver {
     }
 
     /**
-     * Empty the USDC reserve.
+     * Empty the CRUNCH of the smart-contract.
+     * Must never be called because there is no need to send CRUNCH to this contract.
      *
      * Requirements:
      * - caller must be the owner.
