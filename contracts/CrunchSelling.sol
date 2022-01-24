@@ -219,7 +219,7 @@ contract CrunchSelling is Ownable, Pausable, IERC677Receiver {
      *
      * Requirements:
      * - caller must be the owner.
-     * - the contract must not be paused.
+     * - the contract must be paused.
      *
      * @param newCrunch new CRUNCH address.
      */
@@ -234,7 +234,7 @@ contract CrunchSelling is Ownable, Pausable, IERC677Receiver {
      *
      * Requirements:
      * - caller must be the owner.
-     * - the contract must not be paused.
+     * - the contract must be paused.
      *
      * @param newUsdc new USDC address.
      */
@@ -249,7 +249,7 @@ contract CrunchSelling is Ownable, Pausable, IERC677Receiver {
      *
      * Requirements:
      * - caller must be the owner.
-     * - the contract must not be paused.
+     * - the contract must be paused.
      *
      * @param newPrice new price value.
      */
@@ -263,7 +263,7 @@ contract CrunchSelling is Ownable, Pausable, IERC677Receiver {
      *
      * Requirements:
      * - caller must be the owner.
-     * - the contract must not be paused.
+     * - the contract must be paused.
      */
     function destroy() external onlyOwner whenPaused {
         _emptyReserve();
