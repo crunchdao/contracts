@@ -250,11 +250,10 @@ contract CrunchSelling is Ownable, Pausable, IERC677Receiver {
      *
      * Requirements:
      * - caller must be the owner.
-     * - the contract must be paused.
      *
      * @param newPrice new price value.
      */
-    function setPrice(uint256 newPrice) external onlyOwner whenPaused {
+    function setPrice(uint256 newPrice) external onlyOwner {
         _setPrice(newPrice);
     }
 
