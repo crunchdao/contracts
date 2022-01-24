@@ -2,7 +2,7 @@ const CrunchToken = artifacts.require("CrunchToken");
 const CrunchSelling = artifacts.require("CrunchSelling");
 const USDCoin = artifacts.require("USDCoin");
 
-const initialPrice = web3.utils.toWei("2.4");
+const initialPrice = web3.utils.toWei("2.4", "picoether" /* ^6 */);
 
 async function getUSDCAddress(deployer, networkId) {
   if (networkId == 1) {
