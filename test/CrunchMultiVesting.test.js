@@ -168,4 +168,26 @@ contract("Crunch Multi Vesting", async ([owner, user, ...accounts]) => {
 
     await expect(multiVesting.creator()).to.eventually.equal(dummy);
   });
+
+  it("vestingsCount(address)", async () => {
+    const beneficiary = user;
+
+    await expect(
+      multiVesting.vestingsCount(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(ZERO);
+
+    await expect(multiVesting.create(beneficiary, ONE, ONE_YEAR, THREE_YEARS))
+      .to.be.fulfilled;
+
+    await expect(
+      multiVesting.vestingsCount(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(ONE);
+
+    await expect(multiVesting.create(beneficiary, ONE, ONE_YEAR, THREE_YEARS))
+      .to.be.fulfilled;
+
+    await expect(
+      multiVesting.vestingsCount(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(TWO);
+  });
 });
