@@ -142,4 +142,17 @@ contract("Crunch Multi Vesting", async ([owner, user, ...accounts]) => {
     await create(ONE, ONE_YEAR, THREE_YEARS, 0);
     await create(TWO, THREE_YEARS, THREE_YEARS, 1);
   });
+
+  it("setCrunch(address)", async () => {
+    const dummy = (await CrunchToken.new()).address;
+
+    await expect(multiVesting.setCrunch(dummy, fromUser)).to.be.rejectedWith(
+      Error,
+      "Ownable: caller is not the owner"
+    );
+
+    await expect(multiVesting.setCrunch(dummy)).to.be.fulfilled;
+
+    await expect(multiVesting.crunch()).to.eventually.equal(dummy);
+  });
 });
