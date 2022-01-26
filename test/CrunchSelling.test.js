@@ -257,6 +257,9 @@ contract("Crunch Selling", async ([owner, user, ...accounts]) => {
     await test(12.8, 1.006, 12.8768);
 
     await test(123456.789, 99.99, 12344444.33211);
+
+    /* 1 USDC cannot be converted to CRUNCH without loosing precision for the price=2.4 */
+    await test(2.4, "0.416666666666666666", "0.999999");
   });
 
   it("reserve()", async () => {
