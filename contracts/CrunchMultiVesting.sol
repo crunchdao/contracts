@@ -223,6 +223,10 @@ contract CrunchMultiVesting is Ownable {
         return vestings[beneficiary].length;
     }
 
+    function activeVestingsCount(address beneficiary) public view returns (uint256) {
+        return _actives[beneficiary].length;
+    }
+
     function _getVesting(address beneficiary, uint256 index)
         internal
         view
