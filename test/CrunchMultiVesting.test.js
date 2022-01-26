@@ -10,9 +10,13 @@ const NULL = "0x0000000000000000000000000000000000000000";
 const ZERO = new BN("0");
 const ONE = new BN("1");
 const TWO = new BN("2");
+const TEN = new BN("10");
 const ONE_YEAR = new BN(timeHelper.years(1));
-const TWO_YEAR = new BN(timeHelper.years(2));
-const THREE_YEAR = new BN(timeHelper.years(3));
+const TWO_YEARS = new BN(timeHelper.years(2));
+const THREE_YEARS = new BN(timeHelper.years(3));
+const ONE_DAY = new BN(timeHelper.days(1));
+const TWO_DAYS = new BN(timeHelper.days(2));
+const THREE_DAYS = new BN(timeHelper.days(3));
 
 contract("Crunch Multi Vesting", async ([owner, user, ...accounts]) => {
   const fromUser = { from: user };
@@ -51,10 +55,10 @@ contract("Crunch Multi Vesting", async ([owner, user, ...accounts]) => {
       ZERO
     );
 
-    await expect(crunch.transfer(multiVesting.address, TWO_YEAR));
+    await expect(crunch.transfer(multiVesting.address, TWO_YEARS));
 
     await expect(multiVesting.reserve()).to.eventually.be.a.bignumber.equal(
-      TWO_YEAR
+      TWO_YEARS
     );
   });
 
@@ -82,13 +86,13 @@ contract("Crunch Multi Vesting", async ([owner, user, ...accounts]) => {
 
   it("create(address, uint256, uint256, uint256) : cliff>duration", async () => {
     await expect(
-      multiVesting.create(user, ONE, TWO_YEAR, ONE_YEAR)
+      multiVesting.create(user, ONE, TWO_YEARS, ONE_YEAR)
     ).to.be.rejectedWith(Error, "MultiVesting: cliff is longer than duration");
   });
 
   it("create(address, uint256, uint256, uint256) : from a user", async () => {
     await expect(
-      multiVesting.create(user, ONE, ONE_YEAR, TWO_YEAR, fromUser)
+      multiVesting.create(user, ONE, ONE_YEAR, TWO_YEARS, fromUser)
     ).to.be.rejectedWith(
       Error,
       "MultiVesting: only creator or owner can do this"
@@ -135,7 +139,7 @@ contract("Crunch Multi Vesting", async ([owner, user, ...accounts]) => {
         .and.be.a.bignumber.equal(ZERO);
     };
 
-    await create(ONE, ONE_YEAR, THREE_YEAR, 0);
-    await create(TWO, THREE_YEAR, THREE_YEAR, 1);
+    await create(ONE, ONE_YEAR, THREE_YEARS, 0);
+    await create(TWO, THREE_YEARS, THREE_YEARS, 1);
   });
 });
