@@ -143,13 +143,15 @@ contract CrunchMultiVesting is Ownable {
         }
     }
 
-    function _releaseAll(address addr) internal {
+    function _releaseAll(address addr) internal returns(uint256 totalReleased) {
         uint256[] storage actives = _actives[addr];
         for (uint256 index = 0; index < actives.length; index++) {
             Vesting storage vesting = _getVesting(addr, index);
 
             uint256 unreleased = _releasableAmount(vesting);
-            require(unreleased > 0, "MultiVesting: no tokens are due");
+            if (unreleased == 0) {
+              continue;
+            }
 
             vesting.released += unreleased;
 
@@ -162,6 +164,8 @@ contract CrunchMultiVesting is Ownable {
             } else {
                 index++;
             }
+            
+            totalReleased += unreleased;
         }
     }
 
