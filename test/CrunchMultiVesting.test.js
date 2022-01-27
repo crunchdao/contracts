@@ -10,6 +10,9 @@ const NULL = "0x0000000000000000000000000000000000000000";
 const ZERO = new BN("0");
 const ONE = new BN("1");
 const TWO = new BN("2");
+const FOUR = new BN("4");
+const SIX = new BN("6");
+const EIGHT = new BN("8");
 const TEN = new BN("10");
 const TWENTY = new BN("20");
 const ONE_YEAR = new BN(timeHelper.years(1));
@@ -18,6 +21,7 @@ const THREE_YEARS = new BN(timeHelper.years(3));
 const ONE_DAY = new BN(timeHelper.days(1));
 const TWO_DAYS = new BN(timeHelper.days(2));
 const THREE_DAYS = new BN(timeHelper.days(3));
+const TEN_DAYS = new BN(timeHelper.days(10));
 
 contract("Crunch Multi Vesting", async ([owner, user, ...accounts]) => {
   const fromUser = { from: user };
@@ -192,6 +196,125 @@ contract("Crunch Multi Vesting", async ([owner, user, ...accounts]) => {
     await expect(
       multiVesting.vestingsCount(beneficiary)
     ).to.eventually.be.a.bignumber.equal(TWO);
+  });
+
+  it("balanceOf(address) : x1", async () => {
+    const beneficiary = user;
+
+    await expect(
+      crunch.transfer(multiVesting.address, await crunch.totalSupply())
+    ).to.be.fulfilled;
+
+    await expect(
+      multiVesting.balanceOf(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(ZERO);
+
+    await expect(multiVesting.create(beneficiary, TEN, TWO_DAYS, TEN_DAYS)).to
+      .be.fulfilled;
+
+    await expect(
+      multiVesting.balanceOf(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(ZERO);
+
+    await advance.timeAndBlock(timeHelper.days(2));
+
+    await expect(
+      multiVesting.balanceOf(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(TWO);
+
+    await advance.timeAndBlock(timeHelper.days(8));
+
+    await expect(
+      multiVesting.balanceOf(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(TEN);
+
+    await advance.timeAndBlock(timeHelper.days(1));
+
+    await expect(
+      multiVesting.balanceOf(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(TEN);
+
+    await expect(multiVesting.releaseAllFor(beneficiary)).to.eventually.be
+      .fulfilled;
+
+    await expect(
+      multiVesting.balanceOf(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(ZERO);
+  });
+
+  it("balanceOf(address) : x3", async () => {
+    const beneficiary = user;
+
+    await expect(
+      crunch.transfer(multiVesting.address, await crunch.totalSupply())
+    ).to.be.fulfilled;
+
+    await expect(
+      multiVesting.balanceOf(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(ZERO);
+
+    await expect(multiVesting.create(beneficiary, TEN, TWO_DAYS, TEN_DAYS)).to
+      .be.fulfilled;
+
+    await expect(
+      multiVesting.balanceOf(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(ZERO);
+
+    await advance.timeAndBlock(timeHelper.days(2));
+
+    await expect(
+      multiVesting.balanceOf(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(TWO);
+
+    await expect(multiVesting.create(beneficiary, TEN, TWO_DAYS, TEN_DAYS)).to
+      .be.fulfilled;
+
+    await expect(
+      multiVesting.balanceOf(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(TWO);
+
+    await advance.timeAndBlock(timeHelper.days(2));
+
+    await expect(
+      multiVesting.balanceOf(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(FOUR.add(TWO));
+
+    await expect(multiVesting.create(beneficiary, TEN, TWO_DAYS, TEN_DAYS)).to
+      .be.fulfilled;
+
+    await expect(
+      multiVesting.balanceOf(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(FOUR.add(TWO));
+
+    await advance.timeAndBlock(timeHelper.days(2));
+
+    await expect(
+      multiVesting.balanceOf(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(SIX.add(FOUR).add(TWO));
+
+    await advance.timeAndBlock(timeHelper.days(4));
+
+    await expect(
+      multiVesting.balanceOf(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(TEN.add(EIGHT).add(SIX));
+
+    await expect(multiVesting.releaseAllFor(beneficiary)).to.be.fulfilled;
+
+    await expect(
+      multiVesting.balanceOf(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(ZERO);
+
+    await advance.timeAndBlock(timeHelper.days(10));
+
+    await expect(
+      multiVesting.balanceOf(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(TWO.add(FOUR));
+
+    await expect(multiVesting.releaseAllFor(beneficiary)).to.be.fulfilled;
+
+    await expect(
+      multiVesting.balanceOf(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(ZERO);
   });
 
   it("activeVestingsCount(address)", async () => {
