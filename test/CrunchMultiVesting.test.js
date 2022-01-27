@@ -11,6 +11,7 @@ const ZERO = new BN("0");
 const ONE = new BN("1");
 const TWO = new BN("2");
 const TEN = new BN("10");
+const TWENTY = new BN("20");
 const ONE_YEAR = new BN(timeHelper.years(1));
 const TWO_YEARS = new BN(timeHelper.years(2));
 const THREE_YEARS = new BN(timeHelper.years(3));
@@ -191,5 +192,51 @@ contract("Crunch Multi Vesting", async ([owner, user, ...accounts]) => {
     await expect(
       multiVesting.vestingsCount(beneficiary)
     ).to.eventually.be.a.bignumber.equal(TWO);
+  });
+
+  it("activeVestingsCount(address)", async () => {
+    const beneficiary = user;
+
+    await expect(
+      crunch.transfer(multiVesting.address, await crunch.totalSupply())
+    ).to.be.fulfilled;
+
+    await expect(multiVesting.create(beneficiary, TEN, ONE_DAY, TWO_DAYS)).to.be
+      .fulfilled;
+
+    await expect(
+      multiVesting.activeVestingsCount(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(ONE);
+
+    await advance.timeAndBlock(timeHelper.oneYear);
+
+    await expect(
+      multiVesting.activeVestingsCount(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(ONE);
+
+    await expect(multiVesting.create(beneficiary, TWENTY, ONE_DAY, TWO_DAYS)).to
+      .be.fulfilled;
+
+    await expect(
+      multiVesting.activeVestingsCount(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(TWO);
+
+    await expect(multiVesting.releaseAllFor(beneficiary)).to.be.fulfilled;
+
+    await expect(
+      multiVesting.activeVestingsCount(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(ONE);
+
+    await advance.timeAndBlock(timeHelper.oneYear);
+
+    await expect(
+      multiVesting.activeVestingsCount(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(ONE);
+
+    await expect(multiVesting.releaseAllFor(beneficiary)).to.be.fulfilled;
+
+    await expect(
+      multiVesting.activeVestingsCount(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(ZERO);
   });
 });
