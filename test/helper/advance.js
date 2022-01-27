@@ -25,13 +25,17 @@ const block = () => {
         method: "evm_mine",
         id: new Date().getTime(),
       },
-      (err, result) => {
+      async (err, result) => {
         if (err) {
           return reject(err);
         }
-        const newBlockHash = web3.eth.getBlock("latest").hash;
 
-        return resolve(newBlockHash);
+        try {
+          const newBlock = await web3.eth.getBlock("latest");
+          return resolve(newBlock);
+        } catch (error) {
+          reject(error);
+        }
       }
     );
   });
@@ -39,9 +43,7 @@ const block = () => {
 
 const timeAndBlock = async (seconds) => {
   await time(seconds);
-  await block();
-
-  return Promise.resolve(web3.eth.getBlock("latest"));
+  return await block();
 };
 
 module.exports = { time, block, timeAndBlock };
