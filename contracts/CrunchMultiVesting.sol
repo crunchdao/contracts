@@ -21,6 +21,15 @@ contract CrunchMultiVesting is Ownable {
         address indexed newAddress
     );
 
+    event VestingCreated(
+        address indexed beneficiary,
+        uint256 amount,
+        uint256 start,
+        uint256 cliff,
+        uint256 duration,
+        uint256 index
+    );
+
     struct Vesting {
         /* beneficiary of tokens after they are released. */
         address beneficiary;
@@ -83,12 +92,14 @@ contract CrunchMultiVesting is Ownable {
         );
 
         uint256 start = block.timestamp;
+        uint256 cliff = start + cliffDuration;
+
         vestings[beneficiary].push(
             Vesting({
                 beneficiary: beneficiary,
                 amount: amount,
                 start: start,
-                cliff: start + cliffDuration,
+                cliff: cliff,
                 duration: duration,
                 released: 0
             })
@@ -96,6 +107,8 @@ contract CrunchMultiVesting is Ownable {
 
         uint256 index = vestings[beneficiary].length - 1;
         _actives[beneficiary].push(index);
+
+        emit VestingCreated(beneficiary, amount, start, cliff, duration, index);
     }
 
     function reserve() public view returns (uint256) {
