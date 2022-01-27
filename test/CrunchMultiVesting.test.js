@@ -51,14 +51,16 @@ contract("Crunch Multi Vesting", async ([owner, user, ...accounts]) => {
   });
 
   it("reserve()", async () => {
+    const amount = new BN("10000");
+
     await expect(multiVesting.reserve()).to.eventually.be.a.bignumber.equal(
       ZERO
     );
 
-    await expect(crunch.transfer(multiVesting.address, TWO_YEARS));
+    await expect(crunch.transfer(multiVesting.address, amount)).to.be.fulfilled;
 
     await expect(multiVesting.reserve()).to.eventually.be.a.bignumber.equal(
-      TWO_YEARS
+      amount
     );
   });
 
