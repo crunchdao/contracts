@@ -156,14 +156,18 @@ contract CrunchMultiVesting is Ownable {
         }
     }
 
-    function _releaseAll(address addr) internal returns(uint256 totalReleased) {
+    function _releaseAll(address addr) internal {
+        uint256 totalReleased;
+
         uint256[] storage actives = _actives[addr];
-        for (uint256 index = 0; index < actives.length; index++) {
+        for (uint256 activeIndex = 0; activeIndex < actives.length; ) {
+            uint256 index = actives[activeIndex];
             Vesting storage vesting = _getVesting(addr, index);
 
             uint256 unreleased = _releasableAmount(vesting);
             if (unreleased == 0) {
-              continue;
+                activeIndex++;
+                continue;
             }
 
             vesting.released += unreleased;
@@ -173,31 +177,25 @@ contract CrunchMultiVesting is Ownable {
             emit TokensReleased(vesting.beneficiary, index, unreleased);
 
             if (vesting.released == vesting.amount) {
-                _removeActive(addr, index);
+                _removeActive(addr, activeIndex);
             } else {
-                index++;
+                activeIndex++;
             }
-            
+
             totalReleased += unreleased;
         }
+
+        require(totalReleased > 0, "MultiVesting: no tokens are due");
     }
 
-    function _removeActive(address addr, uint256 _vestingIndex) internal {
+    function _removeActive(address addr, uint256 activeIndex) internal {
         uint256[] storage actives = _actives[addr];
-        for (uint256 index = 0; index < actives.length; index++) {
-            uint256 vestingIndex = actives[index];
 
-            if (vestingIndex == _vestingIndex) {
-                if (actives.length != 1) {
-                    actives[index] = actives.length - 1;
-                }
-
-                actives.pop();
-                break;
-            }
+        if (actives.length > 1) {
+            actives[activeIndex] = actives[actives.length - 1];
         }
 
-        revert("active index not found");
+        actives.pop();
     }
 
     function _releasableAmount(Vesting memory vesting)
@@ -213,14 +211,15 @@ contract CrunchMultiVesting is Ownable {
         view
         returns (uint256)
     {
+        uint256 amount = vesting.amount;
+
         if (block.timestamp < vesting.cliff) {
             return 0;
         } else if ((block.timestamp >= vesting.start + vesting.duration)) {
-            return vesting.amount;
+            return amount;
         } else {
             return
-                (vesting.amount * (block.timestamp - vesting.start)) /
-                vesting.duration;
+                (amount * (block.timestamp - vesting.start)) / vesting.duration;
         }
     }
 
@@ -236,7 +235,11 @@ contract CrunchMultiVesting is Ownable {
         return vestings[beneficiary].length;
     }
 
-    function activeVestingsCount(address beneficiary) public view returns (uint256) {
+    function activeVestingsCount(address beneficiary)
+        public
+        view
+        returns (uint256)
+    {
         return _actives[beneficiary].length;
     }
 
