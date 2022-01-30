@@ -487,167 +487,534 @@ contract("Crunch Multi Vesting", async ([owner, user, ...accounts]) => {
 
     await expect(
       multiVesting.releasableAmountAt(beneficiary, index)
+    ).to.eventually.be.a.bignumber.equal(new BN("30"));
+
+    await expect(
+      multiVesting.releasableAmountAt(beneficiary, index2)
+    ).to.eventually.be.a.bignumber.equal(ZERO);
+
+    await advance.timeAndBlock(timeHelper.days(1));
+
+    await expect(
+      multiVesting.releasableAmountAt(beneficiary, index)
+    ).to.eventually.be.a.bignumber.equal(new BN("40"));
+
+    await expect(
+      multiVesting.releasableAmountAt(beneficiary, index2)
+    ).to.eventually.be.a.bignumber.equal(new BN("0"));
+
+    await advance.timeAndBlock(timeHelper.days(1));
+
+    await expect(
+      multiVesting.releasableAmountAt(beneficiary, index)
+    ).to.eventually.be.a.bignumber.equal(new BN("50"));
+
+    await expect(
+      multiVesting.releasableAmountAt(beneficiary, index2)
+    ).to.eventually.be.a.bignumber.equal(new BN("20"));
+
+    await advance.timeAndBlock(timeHelper.days(1));
+
+    await expect(
+      multiVesting.releasableAmountAt(beneficiary, index)
+    ).to.eventually.be.a.bignumber.equal(new BN("60"));
+
+    await expect(
+      multiVesting.releasableAmountAt(beneficiary, index2)
+    ).to.eventually.be.a.bignumber.equal(new BN("30"));
+
+    await expect(multiVesting.release(index, fromBeneficiary)).to.be.fulfilled;
+
+    await expect(
+      multiVesting.releasableAmountAt(beneficiary, index)
+    ).to.eventually.be.a.bignumber.equal(new BN("0"));
+
+    await expect(
+      multiVesting.releasableAmountAt(beneficiary, index2)
+    ).to.eventually.be.a.bignumber.equal(new BN("30"));
+
+    await advance.timeAndBlock(timeHelper.days(1));
+
+    await expect(
+      multiVesting.releasableAmountAt(beneficiary, index)
+    ).to.eventually.be.a.bignumber.equal(new BN("10"));
+
+    await expect(
+      multiVesting.releasableAmountAt(beneficiary, index2)
+    ).to.eventually.be.a.bignumber.equal(new BN("40"));
+
+    await expect(multiVesting.release(index2, fromBeneficiary)).to.be.fulfilled;
+
+    await expect(
+      multiVesting.releasableAmountAt(beneficiary, index)
+    ).to.eventually.be.a.bignumber.equal(new BN("10"));
+
+    await expect(
+      multiVesting.releasableAmountAt(beneficiary, index2)
+    ).to.eventually.be.a.bignumber.equal(new BN("0"));
+
+    await advance.timeAndBlock(timeHelper.days(1));
+
+    await expect(
+      multiVesting.releasableAmountAt(beneficiary, index)
+    ).to.eventually.be.a.bignumber.equal(new BN("20"));
+
+    await expect(
+      multiVesting.releasableAmountAt(beneficiary, index2)
+    ).to.eventually.be.a.bignumber.equal(new BN("10"));
+
+    await advance.timeAndBlock(timeHelper.days(1));
+
+    await expect(
+      multiVesting.releasableAmountAt(beneficiary, index)
+    ).to.eventually.be.a.bignumber.equal(new BN("30"));
+
+    await expect(
+      multiVesting.releasableAmountAt(beneficiary, index2)
+    ).to.eventually.be.a.bignumber.equal(new BN("20"));
+
+    await advance.timeAndBlock(timeHelper.days(1));
+
+    await expect(
+      multiVesting.releasableAmountAt(beneficiary, index)
+    ).to.eventually.be.a.bignumber.equal(new BN("40"));
+
+    await expect(
+      multiVesting.releasableAmountAt(beneficiary, index2)
+    ).to.eventually.be.a.bignumber.equal(new BN("30"));
+
+    await advance.timeAndBlock(timeHelper.days(1));
+
+    await expect(
+      multiVesting.releasableAmountAt(beneficiary, index)
+    ).to.eventually.be.a.bignumber.equal(new BN("40"));
+
+    await expect(
+      multiVesting.releasableAmountAt(beneficiary, index2)
+    ).to.eventually.be.a.bignumber.equal(new BN("40"));
+
+    await advance.timeAndBlock(timeHelper.days(1));
+
+    await expect(
+      multiVesting.releasableAmountAt(beneficiary, index)
+    ).to.eventually.be.a.bignumber.equal(new BN("40"));
+
+    await expect(
+      multiVesting.releasableAmountAt(beneficiary, index2)
+    ).to.eventually.be.a.bignumber.equal(new BN("50"));
+
+    await advance.timeAndBlock(timeHelper.days(1));
+
+    await expect(
+      multiVesting.releasableAmountAt(beneficiary, index)
+    ).to.eventually.be.a.bignumber.equal(new BN("40"));
+
+    await expect(
+      multiVesting.releasableAmountAt(beneficiary, index2)
+    ).to.eventually.be.a.bignumber.equal(new BN("60"));
+
+    await advance.timeAndBlock(timeHelper.days(1));
+
+    await expect(
+      multiVesting.releasableAmountAt(beneficiary, index)
+    ).to.eventually.be.a.bignumber.equal(new BN("40"));
+
+    await expect(
+      multiVesting.releasableAmountAt(beneficiary, index2)
+    ).to.eventually.be.a.bignumber.equal(new BN("60"));
+
+    await expect(multiVesting.release(index2, fromBeneficiary)).to.be.fulfilled;
+
+    await expect(
+      multiVesting.releasableAmountAt(beneficiary, index)
+    ).to.eventually.be.a.bignumber.equal(new BN("40"));
+
+    await expect(
+      multiVesting.releasableAmountAt(beneficiary, index2)
+    ).to.eventually.be.a.bignumber.equal(new BN("0"));
+
+    await expect(multiVesting.release(index, fromBeneficiary)).to.be.fulfilled;
+
+    await expect(
+      multiVesting.releasableAmountAt(beneficiary, index)
+    ).to.eventually.be.a.bignumber.equal(new BN("0"));
+
+    await expect(
+      multiVesting.releasableAmountAt(beneficiary, index2)
+    ).to.eventually.be.a.bignumber.equal(new BN("0"));
+
+    await advance.timeAndBlock(timeHelper.days(1));
+
+    await expect(
+      multiVesting.releasableAmountAt(beneficiary, index)
+    ).to.eventually.be.a.bignumber.equal(new BN("0"));
+
+    await expect(
+      multiVesting.releasableAmountAt(beneficiary, index2)
+    ).to.eventually.be.a.bignumber.equal(new BN("0"));
+  });
+
+  it("vestedAmount(address)", async () => {
+    const beneficiary = user;
+    const amount = new BN("100");
+    const cliffDuration = TWO_DAYS;
+    const duration = TEN_DAYS;
+
+    const fromBeneficiary = {
+      from: beneficiary,
+    };
+
+    await expect(
+      crunch.transfer(multiVesting.address, await crunch.totalSupply())
+    ).to.be.fulfilled;
+
+    await expect(
+      multiVesting.create(beneficiary, amount, cliffDuration, duration)
+    ).to.be.fulfilled;
+
+    await expect(
+      multiVesting.vestedAmount(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(ZERO);
+
+    await advance.timeAndBlock(timeHelper.days(1));
+
+    await expect(
+      multiVesting.vestedAmount(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(ZERO);
+
+    await advance.timeAndBlock(timeHelper.days(1));
+
+    await expect(
+      multiVesting.vestedAmount(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(new BN("20"));
+
+    await advance.timeAndBlock(timeHelper.days(1));
+
+    await expect(
+      multiVesting.vestedAmount(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(new BN("30"));
+
+    await expect(
+      multiVesting.create(beneficiary, amount, cliffDuration, duration)
+    ).to.be.fulfilled;
+
+    await expect(
+      multiVesting.vestedAmount(beneficiary)
     ).to.eventually.be.a.bignumber.equal(new BN("30").add(ZERO));
 
     await advance.timeAndBlock(timeHelper.days(1));
 
     await expect(
-      multiVesting.releasableAmountAt(beneficiary, index)
-    ).to.eventually.be.a.bignumber.equal(new BN("40"));
-
-    await expect(
-      multiVesting.releasableAmountAt(beneficiary, index2)
-    ).to.eventually.be.a.bignumber.equal(new BN("0"));
+      multiVesting.vestedAmount(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(new BN("40").add(ZERO));
 
     await advance.timeAndBlock(timeHelper.days(1));
 
     await expect(
-      multiVesting.releasableAmountAt(beneficiary, index)
-    ).to.eventually.be.a.bignumber.equal(new BN("50"));
+      multiVesting.vestedAmount(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(new BN("50").add(new BN("20")));
+
+    await advance.timeAndBlock(timeHelper.days(1));
 
     await expect(
-      multiVesting.releasableAmountAt(beneficiary, index2)
+      multiVesting.vestedAmount(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(new BN("60").add(new BN("30")));
+
+    const index = new BN("0");
+    await expect(multiVesting.release(index, fromBeneficiary)).to.be.fulfilled;
+
+    await expect(
+      multiVesting.vestedAmount(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(new BN("60").add(new BN("30")));
+
+    await advance.timeAndBlock(timeHelper.days(1));
+
+    await expect(
+      multiVesting.vestedAmount(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(new BN("70").add(new BN("40")));
+
+    const index2 = new BN("1");
+    await expect(multiVesting.release(index2, fromBeneficiary)).to.be.fulfilled;
+
+    await expect(
+      multiVesting.vestedAmount(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(new BN("70").add(new BN("40")));
+
+    await advance.timeAndBlock(timeHelper.days(1));
+
+    await expect(
+      multiVesting.vestedAmount(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(new BN("80").add(new BN("50")));
+
+    await advance.timeAndBlock(timeHelper.days(1));
+
+    await expect(
+      multiVesting.vestedAmount(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(new BN("90").add(new BN("60")));
+
+    await advance.timeAndBlock(timeHelper.days(1));
+
+    await expect(
+      multiVesting.vestedAmount(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(new BN("100").add(new BN("70")));
+
+    await advance.timeAndBlock(timeHelper.days(1));
+
+    await expect(
+      multiVesting.vestedAmount(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(new BN("100").add(new BN("80")));
+
+    await advance.timeAndBlock(timeHelper.days(1));
+
+    await expect(
+      multiVesting.vestedAmount(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(new BN("100").add(new BN("90")));
+
+    await advance.timeAndBlock(timeHelper.days(1));
+
+    await expect(
+      multiVesting.vestedAmount(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(new BN("100").add(new BN("100")));
+
+    await advance.timeAndBlock(timeHelper.days(1));
+
+    await expect(
+      multiVesting.vestedAmount(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(new BN("100").add(new BN("100")));
+
+    await expect(multiVesting.release(index2, fromBeneficiary)).to.be.fulfilled;
+
+    await expect(
+      multiVesting.vestedAmount(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(new BN("100").add(new BN("100")));
+
+    await expect(multiVesting.release(index, fromBeneficiary)).to.be.fulfilled;
+
+    await expect(
+      multiVesting.vestedAmount(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(new BN("100").add(new BN("100")));
+
+    await advance.timeAndBlock(timeHelper.days(1));
+
+    await expect(
+      multiVesting.vestedAmount(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(new BN("100").add(new BN("100")));
+  });
+
+  it("vestedAmountAt(address, uint256)", async () => {
+    const beneficiary = user;
+    const amount = new BN("100");
+    const cliffDuration = TWO_DAYS;
+    const duration = TEN_DAYS;
+
+    const fromBeneficiary = {
+      from: beneficiary,
+    };
+
+    await expect(
+      crunch.transfer(multiVesting.address, await crunch.totalSupply())
+    ).to.be.fulfilled;
+
+    await expect(
+      multiVesting.create(beneficiary, amount, cliffDuration, duration)
+    ).to.be.fulfilled;
+
+    const index = new BN("0");
+    const index2 = new BN("1");
+
+    await expect(
+      multiVesting.vestedAmountAt(beneficiary, index)
+    ).to.eventually.be.a.bignumber.equal(ZERO);
+
+    await advance.timeAndBlock(timeHelper.days(1));
+
+    await expect(
+      multiVesting.vestedAmountAt(beneficiary, index)
+    ).to.eventually.be.a.bignumber.equal(ZERO);
+
+    await advance.timeAndBlock(timeHelper.days(1));
+
+    await expect(
+      multiVesting.vestedAmountAt(beneficiary, index)
     ).to.eventually.be.a.bignumber.equal(new BN("20"));
 
     await advance.timeAndBlock(timeHelper.days(1));
 
     await expect(
-      multiVesting.releasableAmountAt(beneficiary, index)
+      multiVesting.vestedAmountAt(beneficiary, index)
+    ).to.eventually.be.a.bignumber.equal(new BN("30"));
+
+    await expect(
+      multiVesting.create(beneficiary, amount, cliffDuration, duration)
+    ).to.be.fulfilled;
+
+    await expect(
+      multiVesting.vestedAmountAt(beneficiary, index)
+    ).to.eventually.be.a.bignumber.equal(new BN("30").add(ZERO));
+
+    await expect(
+      multiVesting.vestedAmountAt(beneficiary, index2)
+    ).to.eventually.be.a.bignumber.equal(ZERO);
+
+    await advance.timeAndBlock(timeHelper.days(1));
+
+    await expect(
+      multiVesting.vestedAmountAt(beneficiary, index)
+    ).to.eventually.be.a.bignumber.equal(new BN("40"));
+
+    await expect(
+      multiVesting.vestedAmountAt(beneficiary, index2)
+    ).to.eventually.be.a.bignumber.equal(new BN("0"));
+
+    await advance.timeAndBlock(timeHelper.days(1));
+
+    await expect(
+      multiVesting.vestedAmountAt(beneficiary, index)
+    ).to.eventually.be.a.bignumber.equal(new BN("50"));
+
+    await expect(
+      multiVesting.vestedAmountAt(beneficiary, index2)
+    ).to.eventually.be.a.bignumber.equal(new BN("20"));
+
+    await advance.timeAndBlock(timeHelper.days(1));
+
+    await expect(
+      multiVesting.vestedAmountAt(beneficiary, index)
     ).to.eventually.be.a.bignumber.equal(new BN("60"));
 
     await expect(
-      multiVesting.releasableAmountAt(beneficiary, index2)
+      multiVesting.vestedAmountAt(beneficiary, index2)
     ).to.eventually.be.a.bignumber.equal(new BN("30"));
 
     await expect(multiVesting.release(index, fromBeneficiary)).to.be.fulfilled;
 
     await expect(
-      multiVesting.releasableAmountAt(beneficiary, index)
-    ).to.eventually.be.a.bignumber.equal(new BN("0"));
+      multiVesting.vestedAmountAt(beneficiary, index)
+    ).to.eventually.be.a.bignumber.equal(new BN("60"));
 
     await expect(
-      multiVesting.releasableAmountAt(beneficiary, index2)
+      multiVesting.vestedAmountAt(beneficiary, index2)
     ).to.eventually.be.a.bignumber.equal(new BN("30"));
 
     await advance.timeAndBlock(timeHelper.days(1));
 
     await expect(
-      multiVesting.releasableAmountAt(beneficiary, index)
-    ).to.eventually.be.a.bignumber.equal(new BN("10"));
+      multiVesting.vestedAmountAt(beneficiary, index)
+    ).to.eventually.be.a.bignumber.equal(new BN("70"));
 
     await expect(
-      multiVesting.releasableAmountAt(beneficiary, index2)
+      multiVesting.vestedAmountAt(beneficiary, index2)
     ).to.eventually.be.a.bignumber.equal(new BN("40"));
 
     await expect(multiVesting.release(index2, fromBeneficiary)).to.be.fulfilled;
 
     await expect(
-      multiVesting.releasableAmountAt(beneficiary, index)
-    ).to.eventually.be.a.bignumber.equal(new BN("10"));
+      multiVesting.vestedAmountAt(beneficiary, index)
+    ).to.eventually.be.a.bignumber.equal(new BN("70"));
 
     await expect(
-      multiVesting.releasableAmountAt(beneficiary, index2)
-    ).to.eventually.be.a.bignumber.equal(new BN("0"));
-
-    await advance.timeAndBlock(timeHelper.days(1));
-
-    await expect(
-      multiVesting.releasableAmountAt(beneficiary, index)
-    ).to.eventually.be.a.bignumber.equal(new BN("20"));
-
-    await expect(
-      multiVesting.releasableAmountAt(beneficiary, index2)
-    ).to.eventually.be.a.bignumber.equal(new BN("10"));
-
-    await advance.timeAndBlock(timeHelper.days(1));
-
-    await expect(
-      multiVesting.releasableAmountAt(beneficiary, index)
-    ).to.eventually.be.a.bignumber.equal(new BN("30"));
-
-    await expect(
-      multiVesting.releasableAmountAt(beneficiary, index2)
-    ).to.eventually.be.a.bignumber.equal(new BN("20"));
-
-    await advance.timeAndBlock(timeHelper.days(1));
-
-    await expect(
-      multiVesting.releasableAmountAt(beneficiary, index)
-    ).to.eventually.be.a.bignumber.equal(new BN("40"));
-
-    await expect(
-      multiVesting.releasableAmountAt(beneficiary, index2)
-    ).to.eventually.be.a.bignumber.equal(new BN("30"));
-
-    await advance.timeAndBlock(timeHelper.days(1));
-
-    await expect(
-      multiVesting.releasableAmountAt(beneficiary, index)
-    ).to.eventually.be.a.bignumber.equal(new BN("40"));
-
-    await expect(
-      multiVesting.releasableAmountAt(beneficiary, index2)
+      multiVesting.vestedAmountAt(beneficiary, index2)
     ).to.eventually.be.a.bignumber.equal(new BN("40"));
 
     await advance.timeAndBlock(timeHelper.days(1));
 
     await expect(
-      multiVesting.releasableAmountAt(beneficiary, index)
-    ).to.eventually.be.a.bignumber.equal(new BN("40"));
+      multiVesting.vestedAmountAt(beneficiary, index)
+    ).to.eventually.be.a.bignumber.equal(new BN("80"));
 
     await expect(
-      multiVesting.releasableAmountAt(beneficiary, index2)
+      multiVesting.vestedAmountAt(beneficiary, index2)
     ).to.eventually.be.a.bignumber.equal(new BN("50"));
 
     await advance.timeAndBlock(timeHelper.days(1));
 
     await expect(
-      multiVesting.releasableAmountAt(beneficiary, index)
-    ).to.eventually.be.a.bignumber.equal(new BN("40"));
+      multiVesting.vestedAmountAt(beneficiary, index)
+    ).to.eventually.be.a.bignumber.equal(new BN("90"));
 
     await expect(
-      multiVesting.releasableAmountAt(beneficiary, index2)
+      multiVesting.vestedAmountAt(beneficiary, index2)
     ).to.eventually.be.a.bignumber.equal(new BN("60"));
 
     await advance.timeAndBlock(timeHelper.days(1));
 
     await expect(
-      multiVesting.releasableAmountAt(beneficiary, index)
-    ).to.eventually.be.a.bignumber.equal(new BN("40"));
+      multiVesting.vestedAmountAt(beneficiary, index)
+    ).to.eventually.be.a.bignumber.equal(new BN("100"));
 
     await expect(
-      multiVesting.releasableAmountAt(beneficiary, index2)
-    ).to.eventually.be.a.bignumber.equal(new BN("60"));
+      multiVesting.vestedAmountAt(beneficiary, index2)
+    ).to.eventually.be.a.bignumber.equal(new BN("70"));
+
+    await advance.timeAndBlock(timeHelper.days(1));
+
+    await expect(
+      multiVesting.vestedAmountAt(beneficiary, index)
+    ).to.eventually.be.a.bignumber.equal(new BN("100"));
+
+    await expect(
+      multiVesting.vestedAmountAt(beneficiary, index2)
+    ).to.eventually.be.a.bignumber.equal(new BN("80"));
+
+    await advance.timeAndBlock(timeHelper.days(1));
+
+    await expect(
+      multiVesting.vestedAmountAt(beneficiary, index)
+    ).to.eventually.be.a.bignumber.equal(new BN("100"));
+
+    await expect(
+      multiVesting.vestedAmountAt(beneficiary, index2)
+    ).to.eventually.be.a.bignumber.equal(new BN("90"));
+
+    await advance.timeAndBlock(timeHelper.days(1));
+
+    await expect(
+      multiVesting.vestedAmountAt(beneficiary, index)
+    ).to.eventually.be.a.bignumber.equal(new BN("100"));
+
+    await expect(
+      multiVesting.vestedAmountAt(beneficiary, index2)
+    ).to.eventually.be.a.bignumber.equal(new BN("100"));
+
+    await advance.timeAndBlock(timeHelper.days(1));
+
+    await expect(
+      multiVesting.vestedAmountAt(beneficiary, index)
+    ).to.eventually.be.a.bignumber.equal(new BN("100"));
+
+    await expect(
+      multiVesting.vestedAmountAt(beneficiary, index2)
+    ).to.eventually.be.a.bignumber.equal(new BN("100"));
 
     await expect(multiVesting.release(index2, fromBeneficiary)).to.be.fulfilled;
 
     await expect(
-      multiVesting.releasableAmountAt(beneficiary, index)
-    ).to.eventually.be.a.bignumber.equal(new BN("40"));
+      multiVesting.vestedAmountAt(beneficiary, index)
+    ).to.eventually.be.a.bignumber.equal(new BN("100"));
 
     await expect(
-      multiVesting.releasableAmountAt(beneficiary, index2)
-    ).to.eventually.be.a.bignumber.equal(new BN("0"));
+      multiVesting.vestedAmountAt(beneficiary, index2)
+    ).to.eventually.be.a.bignumber.equal(new BN("100"));
 
     await expect(multiVesting.release(index, fromBeneficiary)).to.be.fulfilled;
 
     await expect(
-      multiVesting.releasableAmountAt(beneficiary, index)
-    ).to.eventually.be.a.bignumber.equal(new BN("0"));
+      multiVesting.vestedAmountAt(beneficiary, index)
+    ).to.eventually.be.a.bignumber.equal(new BN("100"));
 
     await expect(
-      multiVesting.releasableAmountAt(beneficiary, index2)
-    ).to.eventually.be.a.bignumber.equal(new BN("0"));
+      multiVesting.vestedAmountAt(beneficiary, index2)
+    ).to.eventually.be.a.bignumber.equal(new BN("100"));
 
     await advance.timeAndBlock(timeHelper.days(1));
 
     await expect(
-      multiVesting.releasableAmountAt(beneficiary, index)
-    ).to.eventually.be.a.bignumber.equal(new BN("0"));
+      multiVesting.vestedAmountAt(beneficiary, index)
+    ).to.eventually.be.a.bignumber.equal(new BN("100"));
 
     await expect(
-      multiVesting.releasableAmountAt(beneficiary, index2)
-    ).to.eventually.be.a.bignumber.equal(new BN("0"));
+      multiVesting.vestedAmountAt(beneficiary, index2)
+    ).to.eventually.be.a.bignumber.equal(new BN("100"));
   });
 
   it("setCrunch(address)", async () => {
