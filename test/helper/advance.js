@@ -1,4 +1,8 @@
 const time = (seconds) => {
+  if (web3.utils.isBN(seconds)) {
+    seconds = seconds.toNumber()
+  }
+
   return new Promise((resolve, reject) => {
     web3.currentProvider.send(
       {
