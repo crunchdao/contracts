@@ -200,6 +200,26 @@ contract CrunchMultiVesting is Ownable {
         }
     }
 
+    function setCrunch(address newCrunch) external onlyOwner {
+        _setCrunch(newCrunch);
+    }
+
+    function setCreator(address newCreator) external onlyOwner {
+        _setCreator(newCreator);
+    }
+
+    function vestingsCount(address beneficiary) public view returns (uint256) {
+        return vestings[beneficiary].length;
+    }
+
+    function activeVestingsCount(address beneficiary)
+        public
+        view
+        returns (uint256)
+    {
+        return _actives[beneficiary].length;
+    }
+
     function _release(address addr, uint256 index) internal {
         Vesting storage vesting = _getVesting(addr, index);
 
@@ -268,7 +288,7 @@ contract CrunchMultiVesting is Ownable {
     }
 
     function _vestedAmount(Vesting memory vesting)
-        public
+        internal
         view
         returns (uint256)
     {
@@ -282,26 +302,6 @@ contract CrunchMultiVesting is Ownable {
             return
                 (amount * (block.timestamp - vesting.start)) / vesting.duration;
         }
-    }
-
-    function setCrunch(address newCrunch) external onlyOwner {
-        _setCrunch(newCrunch);
-    }
-
-    function setCreator(address newCreator) external onlyOwner {
-        _setCreator(newCreator);
-    }
-
-    function vestingsCount(address beneficiary) public view returns (uint256) {
-        return vestings[beneficiary].length;
-    }
-
-    function activeVestingsCount(address beneficiary)
-        public
-        view
-        returns (uint256)
-    {
-        return _actives[beneficiary].length;
     }
 
     function _getVesting(address beneficiary, uint256 index)
