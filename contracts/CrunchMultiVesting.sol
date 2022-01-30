@@ -161,14 +161,9 @@ contract CrunchMultiVesting is Ownable {
     }
 
     function vestedAmount(address addr) external view returns (uint256 total) {
-        uint256[] storage actives = _actives[addr];
+        uint256 size = vestingsCount(addr);
 
-        for (
-            uint256 activeIndex = 0;
-            activeIndex < actives.length;
-            activeIndex++
-        ) {
-            uint256 index = actives[activeIndex];
+        for (uint256 index = 0; index < size; index++) {
             Vesting storage vesting = _getVesting(addr, index);
 
             total += _vestedAmount(vesting);
@@ -186,14 +181,9 @@ contract CrunchMultiVesting is Ownable {
     }
 
     function balanceOf(address addr) external view returns (uint256 balance) {
-        uint256[] memory actives = _actives[addr];
+        uint256 size = vestingsCount(addr);
 
-        for (
-            uint256 activeIndex = 0;
-            activeIndex < actives.length;
-            activeIndex++
-        ) {
-            uint256 index = actives[activeIndex];
+        for (uint256 index = 0; index < size; index++) {
             Vesting memory vesting = _getVesting(addr, index);
 
             balance += _releasableAmount(vesting);
