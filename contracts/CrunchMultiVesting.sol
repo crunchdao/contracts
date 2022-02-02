@@ -49,7 +49,7 @@ contract CrunchMultiVesting is Ownable {
     IERC20Metadata public crunch;
 
     address public creator;
-
+    uint256 public lockedReserve;
     mapping(address => Vesting[]) public vestings;
 
     mapping(address => uint256[]) _actives;
@@ -91,6 +91,11 @@ contract CrunchMultiVesting is Ownable {
             "MultiVesting: cliff is longer than duration"
         );
 
+        require(
+            availableReserve() >= amount,
+            "MultiVesting: available reserve is not enough"
+        );
+
         uint256 start = block.timestamp;
         uint256 cliff = start + cliffDuration;
 
@@ -108,11 +113,17 @@ contract CrunchMultiVesting is Ownable {
         uint256 index = vestings[beneficiary].length - 1;
         _actives[beneficiary].push(index);
 
+        lockedReserve += amount;
+
         emit VestingCreated(beneficiary, amount, start, cliff, duration, index);
     }
 
     function reserve() public view returns (uint256) {
         return crunch.balanceOf(address(this));
+    }
+
+    function availableReserve() public view returns (uint256) {
+        return reserve() - lockedReserve;
     }
 
     function release(uint256 index) external {
@@ -220,6 +231,8 @@ contract CrunchMultiVesting is Ownable {
 
         crunch.transfer(vesting.beneficiary, unreleased);
 
+        lockedReserve -= unreleased;
+
         emit TokensReleased(vesting.beneficiary, index, unreleased);
 
         if (vesting.released == vesting.amount) {
@@ -242,6 +255,7 @@ contract CrunchMultiVesting is Ownable {
             }
 
             vesting.released += unreleased;
+            lockedReserve -= unreleased;
 
             crunch.transfer(vesting.beneficiary, unreleased);
 
