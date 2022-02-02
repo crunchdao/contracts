@@ -1562,6 +1562,54 @@ contract("Crunch Multi Vesting", async ([owner, user, ...accounts]) => {
     ).to.eventually.be.a.bignumber.equal(ZERO);
   });
 
+  it("activeVestingsIndex(address)", async () => {
+    const beneficiary = user;
+
+    await expect(
+      crunch.transfer(multiVesting.address, await crunch.totalSupply())
+    ).to.be.fulfilled;
+
+    await expect(
+      multiVesting.activeVestingsIndex(beneficiary)
+    ).to.eventually.deep.equal([]);
+
+    await expect(multiVesting.create(beneficiary, TEN, ONE_DAY, TWO_DAYS)).to.be
+      .fulfilled;
+
+    await expect(multiVesting.activeVestingsIndex(beneficiary))
+      .to.eventually.have.property(0)
+      .and.bignumber.equal(ZERO);
+
+    await advance.timeAndBlock(ONE_DAY);
+
+    await expect(multiVesting.create(beneficiary, TWENTY, ONE_DAY, TEN_DAYS)).to
+      .be.fulfilled;
+
+    await expect(multiVesting.activeVestingsIndex(beneficiary))
+      .to.eventually.have.property(0)
+      .and.bignumber.equal(ZERO);
+
+    await expect(multiVesting.activeVestingsIndex(beneficiary))
+      .to.eventually.have.property(1)
+      .and.bignumber.equal(ONE);
+
+      await advance.timeAndBlock(THREE_DAYS);
+
+    await expect(multiVesting.releaseAllFor(beneficiary)).to.be.fulfilled;
+
+    await expect(multiVesting.activeVestingsIndex(beneficiary))
+      .to.eventually.have.property(0)
+      .and.bignumber.equal(ONE);
+
+    await advance.timeAndBlock(timeHelper.oneYear);
+
+    await expect(multiVesting.releaseAllFor(beneficiary)).to.be.fulfilled;
+
+    await expect(
+      multiVesting.activeVestingsIndex(beneficiary)
+    ).to.eventually.deep.equal([]);
+  });
+
   it("lockedReserve() : using release(uint256)", async () => {
     const beneficiary = user;
     const amount = new BN("100");
