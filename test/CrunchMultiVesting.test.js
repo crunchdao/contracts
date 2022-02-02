@@ -291,6 +291,35 @@ contract("Crunch Multi Vesting", async ([owner, user, ...accounts]) => {
     ).to.be.rejectedWith(Error, "MultiVesting: no tokens are due");
   });
 
+  it("releaseFor(address, uint256)", async () => {
+    const beneficiary = user;
+    const amount = new BN("100");
+    const cliffDuration = TWO_DAYS;
+    const duration = TEN_DAYS;
+
+    await expect(
+      crunch.transfer(multiVesting.address, await crunch.totalSupply())
+    ).to.be.fulfilled;
+
+    await expect(
+      multiVesting.create(beneficiary, amount, cliffDuration, duration)
+    ).to.be.fulfilled;
+
+    /* invalid index */
+    await expect(multiVesting.releaseFor(beneficiary, new BN("10"))).to.be
+      .rejected;
+
+    const index = new BN("0");
+
+    await expect(
+      multiVesting.releaseFor(beneficiary, index, { from: beneficiary })
+    ).to.be.rejectedWith(Error, "Ownable: caller is not the owner");
+
+    await advance.timeAndBlock(duration);
+
+    await expect(multiVesting.releaseFor(beneficiary, index)).to.be.fulfilled;
+  });
+
   it("releaseAll() : x1", async () => {
     const beneficiary = user;
     const amount = new BN("100");
