@@ -2,6 +2,7 @@ const advance = require("./helper/advance");
 const blockHelper = require("./helper/block");
 const timeHelper = require("./helper/time");
 const { expect, BN } = require("./helper/chai");
+const time = require("./helper/time");
 
 const CrunchToken = artifacts.require("CrunchToken");
 const CrunchMultiVesting = artifacts.require("CrunchMultiVesting");
@@ -97,6 +98,22 @@ contract("Crunch Multi Vesting", async ([owner, user, ...accounts]) => {
     ).to.be.rejectedWith(Error, "MultiVesting: cliff is longer than duration");
   });
 
+  it("create(address, uint256, uint256, uint256) : not enough available reserve", async () => {
+    const amount = ONE;
+
+    await expect(
+      multiVesting.create(user, amount, ONE_YEAR, TWO_YEARS)
+    ).to.be.rejectedWith(
+      Error,
+      "MultiVesting: available reserve is not enough"
+    );
+
+    await expect(crunch.transfer(multiVesting.address, amount)).to.be.fulfilled;
+
+    await expect(multiVesting.create(user, amount, ONE_YEAR, TWO_YEARS)).to.be
+      .fulfilled;
+  });
+
   it("create(address, uint256, uint256, uint256) : from a user", async () => {
     await expect(
       multiVesting.create(user, ONE, ONE_YEAR, TWO_YEARS, fromUser)
@@ -106,10 +123,49 @@ contract("Crunch Multi Vesting", async ([owner, user, ...accounts]) => {
     );
   });
 
+  it("create(address, uint256, uint256, uint256) : from creator", async () => {
+    const beneficiary = user;
+    const amount = new BN("100");
+    const cliffDuration = TWO_DAYS;
+    const duration = TEN_DAYS;
+
+    const [creator] = accounts;
+
+    await expect(multiVesting.setCreator(creator)).to.be.fulfilled;
+
+    await expect(
+      multiVesting.create(beneficiary, amount, cliffDuration, duration, {
+        from: user,
+      })
+    ).to.be.rejectedWith(
+      Error,
+      "MultiVesting: only creator or owner can do this"
+    );
+
+    await expect(crunch.transfer(multiVesting.address, amount)).to.be.fulfilled;
+
+    await expect(
+      multiVesting.create(beneficiary, amount, cliffDuration, duration, {
+        from: creator,
+      })
+    ).to.be.fulfilled;
+
+    await expect(crunch.transfer(multiVesting.address, amount)).to.be.fulfilled;
+
+    await expect(
+      multiVesting.create(beneficiary, amount, cliffDuration, duration, {
+        from: owner,
+      })
+    ).to.be.fulfilled;
+  });
+
   it("create(address, uint256, uint256, uint256)", async () => {
     const beneficiary = user;
 
     const create = async (amount, cliffDuration, duration, index) => {
+      await expect(crunch.transfer(multiVesting.address, amount)).to.be
+        .fulfilled;
+
       await expect(
         multiVesting.create(beneficiary, amount, cliffDuration, duration)
       ).to.be.fulfilled;
@@ -1320,6 +1376,10 @@ contract("Crunch Multi Vesting", async ([owner, user, ...accounts]) => {
     const beneficiary = user;
 
     await expect(
+      crunch.transfer(multiVesting.address, await crunch.totalSupply())
+    ).to.be.fulfilled;
+
+    await expect(
       multiVesting.vestingsCount(beneficiary)
     ).to.eventually.be.a.bignumber.equal(ZERO);
 
@@ -1500,6 +1560,209 @@ contract("Crunch Multi Vesting", async ([owner, user, ...accounts]) => {
 
     await expect(
       multiVesting.activeVestingsCount(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(ZERO);
+  });
+
+  it("lockedReserve() : using release(uint256)", async () => {
+    const beneficiary = user;
+    const amount = new BN("100");
+    const cliffDuration = TWO_DAYS;
+    const duration = TEN_DAYS;
+
+    const fromBeneficiary = {
+      from: beneficiary,
+    };
+
+    await expect(
+      multiVesting.lockedReserve()
+    ).to.eventually.be.a.bignumber.equal(ZERO);
+
+    await expect(crunch.transfer(multiVesting.address, amount)).to.be.fulfilled;
+
+    const index = ZERO;
+    await expect(
+      multiVesting.create(beneficiary, amount, cliffDuration, duration)
+    ).to.be.fulfilled;
+
+    await expect(
+      multiVesting.lockedReserve()
+    ).to.eventually.be.a.bignumber.equal(amount);
+
+    await advance.timeAndBlock(time.days(5));
+
+    await expect(crunch.transfer(multiVesting.address, amount)).to.be.fulfilled;
+
+    const index2 = ONE;
+    await expect(
+      multiVesting.create(beneficiary, amount, cliffDuration, duration)
+    ).to.be.fulfilled;
+
+    await expect(
+      multiVesting.lockedReserve()
+    ).to.eventually.be.a.bignumber.equal(amount.muln(2));
+
+    await expect(multiVesting.release(index, fromBeneficiary)).to.be.fulfilled;
+
+    await expect(
+      multiVesting.lockedReserve()
+    ).to.eventually.be.a.bignumber.equal(new BN("150"));
+
+    await advance.timeAndBlock(time.days(5));
+
+    await expect(multiVesting.release(index, fromBeneficiary)).to.be.fulfilled;
+
+    await expect(
+      multiVesting.lockedReserve()
+    ).to.eventually.be.a.bignumber.equal(new BN("100"));
+
+    await expect(multiVesting.release(index2, fromBeneficiary)).to.be.fulfilled;
+
+    await expect(
+      multiVesting.lockedReserve()
+    ).to.eventually.be.a.bignumber.equal(new BN("50"));
+
+    await advance.timeAndBlock(time.days(5));
+
+    await expect(multiVesting.release(index2, fromBeneficiary)).to.be.fulfilled;
+
+    await expect(
+      multiVesting.lockedReserve()
+    ).to.eventually.be.a.bignumber.equal(ZERO);
+  });
+
+  it("lockedReserve() : using releaseAll()", async () => {
+    const beneficiary = user;
+    const amount = new BN("100");
+    const cliffDuration = TWO_DAYS;
+    const duration = TEN_DAYS;
+
+    const fromBeneficiary = {
+      from: beneficiary,
+    };
+
+    await expect(
+      multiVesting.lockedReserve()
+    ).to.eventually.be.a.bignumber.equal(ZERO);
+
+    await expect(crunch.transfer(multiVesting.address, amount)).to.be.fulfilled;
+
+    await expect(
+      multiVesting.create(beneficiary, amount, cliffDuration, duration)
+    ).to.be.fulfilled;
+
+    await expect(
+      multiVesting.lockedReserve()
+    ).to.eventually.be.a.bignumber.equal(amount);
+
+    await advance.timeAndBlock(time.days(5));
+
+    await expect(crunch.transfer(multiVesting.address, amount)).to.be.fulfilled;
+
+    await expect(
+      multiVesting.create(beneficiary, amount, cliffDuration, duration)
+    ).to.be.fulfilled;
+
+    await expect(
+      multiVesting.lockedReserve()
+    ).to.eventually.be.a.bignumber.equal(amount.muln(2));
+
+    await expect(multiVesting.releaseAll(fromBeneficiary)).to.be.fulfilled;
+
+    await expect(
+      multiVesting.lockedReserve()
+    ).to.eventually.be.a.bignumber.equal(amount.muln(2).sub(amount.divn(2)));
+
+    await advance.timeAndBlock(time.days(5));
+
+    await expect(multiVesting.releaseAll(fromBeneficiary)).to.be.fulfilled;
+
+    await expect(
+      multiVesting.lockedReserve()
+    ).to.eventually.be.a.bignumber.equal(
+      amount.muln(2).sub(amount.add(amount.divn(2)))
+    );
+
+    await advance.timeAndBlock(time.days(5));
+
+    await expect(multiVesting.releaseAll(fromBeneficiary)).to.be.fulfilled;
+
+    await expect(
+      multiVesting.lockedReserve()
+    ).to.eventually.be.a.bignumber.equal(ZERO);
+  });
+
+  it("availableReserve()", async () => {
+    const beneficiary = user;
+    const amount = new BN("100");
+    const cliffDuration = TWO_DAYS;
+    const duration = TEN_DAYS;
+
+    const fromBeneficiary = {
+      from: beneficiary,
+    };
+
+    await expect(
+      multiVesting.availableReserve()
+    ).to.eventually.be.a.bignumber.equal(ZERO);
+
+    await expect(crunch.transfer(multiVesting.address, amount)).to.be.fulfilled;
+
+    await expect(
+      multiVesting.availableReserve()
+    ).to.eventually.be.a.bignumber.equal(amount);
+
+    await expect(
+      multiVesting.create(beneficiary, amount, cliffDuration, duration)
+    ).to.be.fulfilled;
+
+    await expect(
+      multiVesting.availableReserve()
+    ).to.eventually.be.a.bignumber.equal(ZERO);
+
+    await advance.timeAndBlock(time.days(5));
+
+    await expect(crunch.transfer(multiVesting.address, amount.muln(2))).to.be.fulfilled;
+
+    await expect(
+      multiVesting.availableReserve()
+    ).to.eventually.be.a.bignumber.equal(amount.muln(2));
+
+    await expect(
+      multiVesting.create(beneficiary, amount, cliffDuration, duration)
+    ).to.be.fulfilled;
+
+    await expect(
+      multiVesting.availableReserve()
+    ).to.eventually.be.a.bignumber.equal(amount);
+
+    await expect(multiVesting.releaseAll(fromBeneficiary)).to.be.fulfilled;
+
+    await expect(
+      multiVesting.availableReserve()
+    ).to.eventually.be.a.bignumber.equal(amount);
+
+    await advance.timeAndBlock(time.days(5));
+
+    await expect(multiVesting.releaseAll(fromBeneficiary)).to.be.fulfilled;
+
+    await expect(
+      multiVesting.availableReserve()
+    ).to.eventually.be.a.bignumber.equal(amount);
+
+    await advance.timeAndBlock(time.days(5));
+
+    await expect(multiVesting.releaseAll(fromBeneficiary)).to.be.fulfilled;
+
+    await expect(
+      multiVesting.availableReserve()
+    ).to.eventually.be.a.bignumber.equal(amount);
+
+    await expect(
+      multiVesting.create(beneficiary, amount, cliffDuration, duration)
+    ).to.be.fulfilled;
+
+    await expect(
+      multiVesting.availableReserve()
     ).to.eventually.be.a.bignumber.equal(ZERO);
   });
 });
