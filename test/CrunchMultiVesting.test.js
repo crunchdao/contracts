@@ -443,6 +443,98 @@ contract("Crunch Multi Vesting", async ([owner, user, ...accounts]) => {
     ).to.eventually.be.a.bignumber.equal(ZERO);
   });
 
+  it("releaseAllFor(address)", async () => {
+    const beneficiary = user;
+    const amount = new BN("100");
+    const cliffDuration = TWO_DAYS;
+    const duration = TEN_DAYS;
+
+    await expect(
+      crunch.transfer(multiVesting.address, await crunch.totalSupply())
+    ).to.be.fulfilled;
+
+    await expect(
+      multiVesting.create(beneficiary, amount, cliffDuration, duration)
+    ).to.be.fulfilled;
+
+    await expect(
+      multiVesting.releaseAllFor(beneficiary, { from: beneficiary })
+    ).to.be.rejectedWith(Error, "Ownable: caller is not the owner");
+
+    await advance.timeAndBlock(timeHelper.days(5));
+
+    await expect(multiVesting.releaseAllFor(beneficiary)).to.be.fulfilled;
+
+    await expect(
+      crunch.balanceOf(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(new BN("50"));
+
+    await expect(
+      multiVesting.activeVestingsCount(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(ONE);
+
+    await expect(
+      multiVesting.create(beneficiary, amount, cliffDuration, duration)
+    ).to.be.fulfilled;
+
+    await expect(multiVesting.releaseAllFor(beneficiary)).to.be.rejectedWith(
+      Error,
+      "MultiVesting: no tokens are due"
+    );
+
+    await expect(
+      multiVesting.activeVestingsCount(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(TWO);
+
+    await advance.timeAndBlock(timeHelper.days(1));
+
+    await expect(multiVesting.releaseAllFor(beneficiary)).to.be.fulfilled;
+
+    await expect(
+      crunch.balanceOf(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(new BN("60").add(new BN("0")));
+
+    await expect(
+      multiVesting.activeVestingsCount(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(TWO);
+
+    await advance.timeAndBlock(timeHelper.days(1));
+
+    await expect(multiVesting.releaseAllFor(beneficiary)).to.be.fulfilled;
+
+    await expect(
+      crunch.balanceOf(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(new BN("70").add(new BN("20")));
+
+    await expect(
+      multiVesting.activeVestingsCount(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(TWO);
+
+    await advance.timeAndBlock(timeHelper.days(3));
+
+    await expect(multiVesting.releaseAllFor(beneficiary)).to.be.fulfilled;
+
+    await expect(
+      crunch.balanceOf(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(new BN("100").add(new BN("50")));
+
+    await expect(
+      multiVesting.activeVestingsCount(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(ONE);
+
+    await advance.timeAndBlock(timeHelper.days(5));
+
+    await expect(multiVesting.releaseAllFor(beneficiary)).to.be.fulfilled;
+
+    await expect(
+      crunch.balanceOf(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(new BN("100").add(new BN("100")));
+
+    await expect(
+      multiVesting.activeVestingsCount(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(ZERO);
+  });
+
   it("releasableAmount(address)", async () => {
     const beneficiary = user;
     const amount = new BN("100");
