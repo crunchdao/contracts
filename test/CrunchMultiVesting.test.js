@@ -291,6 +291,158 @@ contract("Crunch Multi Vesting", async ([owner, user, ...accounts]) => {
     ).to.be.rejectedWith(Error, "MultiVesting: no tokens are due");
   });
 
+  it("releaseAll() : x1", async () => {
+    const beneficiary = user;
+    const amount = new BN("100");
+    const cliffDuration = TWO_DAYS;
+    const duration = TEN_DAYS;
+
+    const fromBeneficiary = {
+      from: beneficiary,
+    };
+
+    await expect(
+      crunch.transfer(multiVesting.address, await crunch.totalSupply())
+    ).to.be.fulfilled;
+
+    await expect(
+      multiVesting.create(beneficiary, amount, cliffDuration, duration)
+    ).to.be.fulfilled;
+
+    await expect(multiVesting.releaseAll(fromBeneficiary)).to.be.rejectedWith(
+      Error,
+      "MultiVesting: no tokens are due"
+    );
+
+    await advance.timeAndBlock(timeHelper.days(1));
+
+    await expect(multiVesting.releaseAll(fromBeneficiary)).to.be.rejectedWith(
+      Error,
+      "MultiVesting: no tokens are due"
+    );
+
+    await advance.timeAndBlock(timeHelper.days(1));
+
+    await expect(multiVesting.releaseAll(fromBeneficiary)).to.be.fulfilled;
+    await expect(
+      crunch.balanceOf(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(new BN("20"));
+
+    await advance.timeAndBlock(timeHelper.days(1));
+
+    await expect(multiVesting.releaseAll(fromBeneficiary)).to.be.fulfilled;
+    await expect(
+      crunch.balanceOf(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(new BN("30"));
+
+    await advance.timeAndBlock(timeHelper.days(2));
+
+    await expect(multiVesting.releaseAll(fromBeneficiary)).to.be.fulfilled;
+    await expect(
+      crunch.balanceOf(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(new BN("50"));
+
+    await advance.timeAndBlock(timeHelper.days(5));
+
+    await expect(multiVesting.releaseAll(fromBeneficiary)).to.be.fulfilled;
+    await expect(
+      crunch.balanceOf(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(amount);
+
+    await advance.timeAndBlock(timeHelper.days(1));
+
+    await expect(
+      multiVesting.activeVestingsCount(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(ZERO);
+
+    await expect(multiVesting.releaseAll(fromBeneficiary)).to.be.rejectedWith(
+      Error,
+      "MultiVesting: no tokens are due"
+    );
+  });
+
+  it("releaseAll() : x2", async () => {
+    const beneficiary = user;
+    const amount = new BN("100");
+    const cliffDuration = TWO_DAYS;
+    const duration = TEN_DAYS;
+
+    const fromBeneficiary = {
+      from: beneficiary,
+    };
+
+    await expect(
+      crunch.transfer(multiVesting.address, await crunch.totalSupply())
+    ).to.be.fulfilled;
+
+    await expect(
+      multiVesting.create(beneficiary, amount, cliffDuration, duration)
+    ).to.be.fulfilled;
+
+    await expect(multiVesting.releaseAll(fromBeneficiary)).to.be.rejectedWith(
+      Error,
+      "MultiVesting: no tokens are due"
+    );
+
+    await advance.timeAndBlock(timeHelper.days(5));
+
+    await expect(multiVesting.releaseAll(fromBeneficiary)).to.be.fulfilled;
+    await expect(
+      crunch.balanceOf(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(new BN("50"));
+
+    await expect(
+      multiVesting.activeVestingsCount(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(ONE);
+
+    await expect(
+      multiVesting.create(beneficiary, amount, cliffDuration, duration)
+    ).to.be.fulfilled;
+
+    await expect(
+      multiVesting.activeVestingsCount(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(TWO);
+
+    await expect(multiVesting.releaseAll(fromBeneficiary)).to.be.rejectedWith(
+      Error,
+      "MultiVesting: no tokens are due"
+    );
+
+    await advance.timeAndBlock(timeHelper.days(3));
+
+    await expect(multiVesting.releaseAll(fromBeneficiary)).to.be.fulfilled;
+    await expect(
+      crunch.balanceOf(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(new BN("80").add(new BN("30")));
+
+    await advance.timeAndBlock(timeHelper.days(2));
+
+    await expect(multiVesting.releaseAll(fromBeneficiary)).to.be.fulfilled;
+    await expect(
+      crunch.balanceOf(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(new BN("100").add(new BN("50")));
+
+    await expect(
+      multiVesting.activeVestingsCount(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(ONE);
+
+    await advance.timeAndBlock(timeHelper.days(5));
+
+    await expect(multiVesting.releaseAll(fromBeneficiary)).to.be.fulfilled;
+    await expect(
+      crunch.balanceOf(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(new BN("100").add(new BN("100")));
+
+    await expect(multiVesting.releaseAll(fromBeneficiary)).to.be.rejectedWith(
+      Error,
+      "MultiVesting: no tokens are due"
+    );
+
+    await expect(
+      multiVesting.activeVestingsCount(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(ZERO);
+  });
+
   it("releasableAmount(address)", async () => {
     const beneficiary = user;
     const amount = new BN("100");
