@@ -221,6 +221,14 @@ contract CrunchMultiVesting is Ownable {
         return _actives[beneficiary].length;
     }
 
+    function activeVestingsIndex(address beneficiary)
+        external
+        view
+        returns (uint256[] memory)
+    {
+        return _actives[beneficiary];
+    }
+
     function _release(address addr, uint256 index) internal {
         Vesting storage vesting = _getVesting(addr, index);
 
