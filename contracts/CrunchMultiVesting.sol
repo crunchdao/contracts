@@ -11,7 +11,7 @@ contract CrunchMultiVesting is Ownable {
         uint256 amount
     );
 
-    event CrunchTokenUpdate(
+    event CrunchTokenUpdated(
         address indexed previousCrunchToken,
         address indexed newCrunchToken
     );
@@ -344,7 +344,7 @@ contract CrunchMultiVesting is Ownable {
 
         crunch = IERC20Metadata(newCrunch);
 
-        emit CrunchTokenUpdate(previousCrunch, address(newCrunch));
+        emit CrunchTokenUpdated(previousCrunch, address(newCrunch));
     }
 
     function _setCreator(address newCreator) internal {
