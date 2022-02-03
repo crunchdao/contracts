@@ -56,10 +56,10 @@ contract CrunchMultiVesting is Ownable {
     /** secondary address that is only allowed to call the `create()` method */
     address public creator;
 
-    /** currently locked tokens that are being by all of the vestings */
+    /** currently locked tokens that are being used by all of the vestings */
     uint256 public lockedReserve;
 
-    /** mapping to a list vestings */
+    /** mapping to vesting list */
     mapping(address => Vesting[]) public vestings;
 
     /** mapping to a list of the currently active vestings index */
@@ -173,7 +173,7 @@ contract CrunchMultiVesting is Ownable {
 
     /**
      * @notice Get the available reserve.
-     * @return The nulber of CRUNCH that can be used to create another vesting.
+     * @return The number of CRUNCH that can be used to create another vesting.
      */
     function availableReserve() public view returns (uint256) {
         return reserve() - lockedReserve;
@@ -182,7 +182,7 @@ contract CrunchMultiVesting is Ownable {
     /**
      * @notice Release a vesting of the current caller by its `index`.
      * @dev A `TokensReleased` event will be emitted.
-     * @dev The transaction will fails if no token are due.
+     * @dev The transaction will fail if no token are due.
      * @param index The vesting index to release.
      */
     function release(uint256 index) external {
@@ -202,7 +202,7 @@ contract CrunchMultiVesting is Ownable {
     /**
      * @notice Release all of active vesting of the current caller.
      * @dev Multiple `TokensReleased` event might be emitted.
-     * @dev The transaction will fails if no token are due.
+     * @dev The transaction will fail if no token are due.
      */
     function releaseAll() external {
         _releaseAll(_msgSender());
@@ -211,7 +211,7 @@ contract CrunchMultiVesting is Ownable {
     /**
      * @notice Release all of active vesting of a specified address.
      * @dev Multiple `TokensReleased` event might be emitted.
-     * @dev The transaction will fails if no token are due.
+     * @dev The transaction will fail if no token are due.
      */
     function releaseAllFor(address addr) external onlyOwner {
         _releaseAll(addr);
@@ -350,7 +350,7 @@ contract CrunchMultiVesting is Ownable {
 
     /**
      * @dev Internal implementation of the release() method.
-     * @dev The methods will fails if there is no tokens due.
+     * @dev The methods will fail if there is no tokens due.
      * @dev A `TokensReleased` event will be emitted.
      * @dev If the vesting's released tokens is the same of the vesting's amount, the vesting is considered as finished, and will be removed from the active list.
      * @param addr Address to release.
@@ -377,7 +377,7 @@ contract CrunchMultiVesting is Ownable {
 
     /**
      * @dev Internal implementation of the releaseAll() method.
-     * @dev The methods will fails if there is no tokens due for all of the vestings.
+     * @dev The methods will fail if there is no tokens due for all of the vestings.
      * @dev Multiple `TokensReleased` event may be emitted.
      * @dev If some vesting's released tokens is the same of their amount, they will considered as finished, and will be removed from the active list.
      * @param addr Address to release.
@@ -430,7 +430,7 @@ contract CrunchMultiVesting is Ownable {
 
     /**
      * @dev Find the active index of a vesting index, and pop it with `_removeActiveAt(address, uint256)`.
-     * @dev The method will fails if the active index is not found.
+     * @dev The method will fail if the active index is not found.
      * @param addr Address to get the active list from.
      * @param index Vesting index to find and pop.
      */
