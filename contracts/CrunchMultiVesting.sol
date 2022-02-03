@@ -270,7 +270,7 @@ contract CrunchMultiVesting is Ownable {
             emit TokensReleased(vesting.beneficiary, index, unreleased);
 
             if (vesting.released == vesting.amount) {
-                _removeActive(addr, activeIndex);
+                _removeActiveAt(addr, activeIndex);
             } else {
                 activeIndex++;
             }
@@ -281,14 +281,29 @@ contract CrunchMultiVesting is Ownable {
         require(totalReleased > 0, "MultiVesting: no tokens are due");
     }
 
-    function _removeActive(address addr, uint256 activeIndex) internal {
+    function _removeActiveAt(address addr, uint256 activeIndex) internal {
         uint256[] storage actives = _actives[addr];
 
-        if (actives.length > 1) {
-            actives[activeIndex] = actives[actives.length - 1];
-        }
+        actives[activeIndex] = actives[actives.length - 1];
 
         actives.pop();
+    }
+
+    function _removeActive(address addr, uint256 index) internal {
+        uint256[] storage actives = _actives[addr];
+
+        for (
+            uint256 activeIndex = 0;
+            activeIndex < actives.length;
+            activeIndex++
+        ) {
+            if (actives[activeIndex] == index) {
+                _removeActiveAt(addr, activeIndex);
+                return;
+            }
+        }
+
+        revert("MultiVesting: active index not found");
     }
 
     function _releasableAmount(Vesting memory vesting)
