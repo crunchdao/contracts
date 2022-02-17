@@ -13,6 +13,7 @@ contract VCrunchToken is Ownable {
     /* CRUNCH erc20 address. */
     IERC20Metadata public crunch;
 
+    mapping(address => address[]) public balanceOfs;
     mapping(address => Invokable[]) public singulars;
     Invokable[] public multiples;
 
@@ -37,6 +38,11 @@ contract VCrunchToken is Ownable {
         view
         returns (uint256 total)
     {
+        address[] storage balances = balanceOfs[beneficiary];
+        for (uint256 index = 0; index < balances.length; index++) {
+            total += crunch.balanceOf(balances[index]);
+        }
+
         Invokable[] storage invokables = singulars[beneficiary];
         for (uint256 index = 0; index < invokables.length; index++) {
             (bool success, uint256 balance) = _invoke(invokables[index]);
@@ -56,6 +62,14 @@ contract VCrunchToken is Ownable {
                 total += balance;
             }
         }
+    }
+
+    function addBalanceOf(address beneficiary, address target)
+        external
+        onlyOwner
+    {
+        // TODO: Protected against double add
+        balanceOfs[beneficiary].push(target);
     }
 
     function addSingular(
