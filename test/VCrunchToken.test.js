@@ -95,6 +95,64 @@ contract("vCRUNCH Token", async (accounts) => {
     ).to.eventually.be.a.bignumber.equal(ZERO);
   });
 
+  it("addSingular(address, address, string calldata) : vesting v2", async () => {
+    const amount = new BN(100);
+    const cliff = time.days(1);
+    const duration = time.days(10);
+
+    const vestingV2 = await CrunchVestingV2.new(
+      crunch.address,
+      beneficiary,
+      cliff,
+      duration
+    );
+
+    const target = vestingV2.address;
+    const signature = "remainingAmount()";
+    const index = ZERO;
+
+    await await expect(
+      vCrunch.addSingular(beneficiary, target, signature, fromUser)
+    ).to.be.rejectedWith(Error, "Ownable: caller is not the owner");
+
+    await await expect(vCrunch.addSingular(beneficiary, target, signature)).to
+      .be.fulfilled;
+
+    await expect(vCrunch.singulars(beneficiary, index))
+      .to.eventually.have.property("target")
+      .and.equal(target);
+
+    await expect(vCrunch.singulars(beneficiary, index))
+      .to.eventually.have.property("signature")
+      .and.equal(signature);
+
+    await expect(
+      vCrunch.balanceOf(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(ZERO);
+
+    await expect(crunch.transfer(vestingV2.address, amount)).to.be.fulfilled;
+
+    await expect(
+      vCrunch.balanceOf(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(amount);
+
+    await advance.timeAndBlock(time.days(5));
+
+    await expect(vestingV2.release(fromBeneficiary)).to.be.fulfilled;
+
+    await expect(
+      vCrunch.balanceOf(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(amount.divn(2));
+
+    await advance.timeAndBlock(time.days(5));
+
+    await expect(vestingV2.release(fromBeneficiary)).to.be.fulfilled;
+
+    await expect(
+      vCrunch.balanceOf(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(ZERO);
+  });
+
   it("addMultiple(address, string calldata) : multi-vesting", async () => {
     const amount = new BN(100);
 
