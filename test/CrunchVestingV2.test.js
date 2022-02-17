@@ -1,8 +1,11 @@
 const advance = require("./helper/advance");
 const { expect, BN } = require("./helper/chai");
+const time = require("./helper/time");
 
 const CrunchToken = artifacts.require("CrunchToken");
 const CrunchVestingV2 = artifacts.require("CrunchVestingV2");
+
+const ZERO = new BN("0");
 
 contract("Crunch Vesting", async (accounts) => {
   let crunch;
@@ -10,10 +13,9 @@ contract("Crunch Vesting", async (accounts) => {
 
   const [owner, beneficiary] = accounts;
 
-  const hourInSeconds = (hour) => hour * 3600;
-  const amount = 1000;
-  const cliffInHour = 2;
-  const durationInHour = 10;
+  const amount = new BN(1000);
+  const cliff = new BN(time.days(2));
+  const duration = new BN(time.days(10));
 
   beforeEach(async () => {
     crunch = await CrunchToken.new();
@@ -21,8 +23,8 @@ contract("Crunch Vesting", async (accounts) => {
     vesting = await CrunchVestingV2.new(
       crunch.address,
       beneficiary,
-      hourInSeconds(cliffInHour),
-      hourInSeconds(durationInHour)
+      cliff,
+      duration
     );
 
     await crunch.transfer(vesting.address, amount);
@@ -34,6 +36,28 @@ contract("Crunch Vesting", async (accounts) => {
 
   it("crunch()", async () => {
     await expect(vesting.crunch()).to.eventually.be.equal(crunch.address);
+  });
+
+  it("remainingAmount()", async () => {
+    await expect(vesting.remainingAmount()).to.eventually.be.a.bignumber.equal(
+      amount
+    );
+
+    await advance.timeAndBlock(duration.divn(2));
+
+    await expect(vesting.release()).to.be.fulfilled;
+
+    await expect(vesting.remainingAmount()).to.eventually.be.a.bignumber.equal(
+      amount.divn(2)
+    );
+
+    await advance.timeAndBlock(duration.divn(2));
+
+    await expect(vesting.release()).to.be.fulfilled;
+
+    await expect(vesting.remainingAmount()).to.eventually.be.a.bignumber.equal(
+      ZERO
+    );
   });
 
   it("setCrunch(address)", async () => {
