@@ -39,16 +39,6 @@ contract("Crunch Multi Vesting", async ([owner, user, ...accounts]) => {
     await expect(multiVesting.creator()).to.eventually.be.equal(owner);
   });
 
-  it("name()", async () => {
-    await expect(multiVesting.name()).to.eventually.be.equal(
-      "Vested CRUNCH Token"
-    );
-  });
-
-  it("symbol()", async () => {
-    await expect(multiVesting.symbol()).to.eventually.be.equal("vCRUNCH");
-  });
-
   it("decimals()", async () => {
     await expect(multiVesting.decimals()).to.eventually.be.a.bignumber.equal(
       await crunch.decimals()
