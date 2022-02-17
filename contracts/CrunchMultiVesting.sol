@@ -57,7 +57,7 @@ contract CrunchMultiVesting is Ownable {
     address public creator;
 
     /** currently locked tokens that are being used by all of the vestings */
-    uint256 public lockedReserve;
+    uint256 public totalSupply;
 
     /** mapping to vesting list */
     mapping(address => Vesting[]) public vestings;
@@ -158,7 +158,7 @@ contract CrunchMultiVesting is Ownable {
         uint256 index = vestings[beneficiary].length - 1;
         _actives[beneficiary].push(index);
 
-        lockedReserve += amount;
+        totalSupply += amount;
 
         emit VestingCreated(beneficiary, amount, start, cliff, duration, index);
     }
@@ -176,7 +176,7 @@ contract CrunchMultiVesting is Ownable {
      * @return The number of CRUNCH that can be used to create another vesting.
      */
     function availableReserve() public view returns (uint256) {
-        return reserve() - lockedReserve;
+        return reserve() - totalSupply;
     }
 
     /**
@@ -366,7 +366,7 @@ contract CrunchMultiVesting is Ownable {
 
         crunch.transfer(vesting.beneficiary, unreleased);
 
-        lockedReserve -= unreleased;
+        totalSupply -= unreleased;
 
         emit TokensReleased(vesting.beneficiary, index, unreleased);
 
@@ -397,7 +397,7 @@ contract CrunchMultiVesting is Ownable {
             }
 
             vesting.released += unreleased;
-            lockedReserve -= unreleased;
+            totalSupply -= unreleased;
 
             crunch.transfer(vesting.beneficiary, unreleased);
 
