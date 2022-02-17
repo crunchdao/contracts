@@ -4,14 +4,6 @@ pragma solidity ^0.8.2;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
-interface ISingleVCrunchTokenHolder {
-    function totalStakedOf(address addr) external view returns (uint256);
-}
-
-interface IMultipleVCrunchTokenHolder {
-    function balanceOf(address addr) external view returns (uint256);
-}
-
 contract VCrunchToken is Ownable {
     struct Invokable {
         address target;
