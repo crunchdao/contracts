@@ -8,7 +8,6 @@ contract VCrunchToken is Ownable {
     struct Invokable {
         address target;
         string signature;
-        bool enabled;
     }
 
     /* CRUNCH erc20 address. */
@@ -40,12 +39,7 @@ contract VCrunchToken is Ownable {
     {
         Invokable[] storage invokables = singulars[beneficiary];
         for (uint256 index = 0; index < invokables.length; index++) {
-            Invokable storage invokable = invokables[index];
-            if (!invokable.enabled) {
-                continue;
-            }
-
-            (bool success, uint256 balance) = _invoke(invokable);
+            (bool success, uint256 balance) = _invoke(invokables[index]);
 
             if (success) {
                 total += balance;
@@ -53,11 +47,6 @@ contract VCrunchToken is Ownable {
         }
 
         for (uint256 index = 0; index < multiples.length; index++) {
-            Invokable storage invokable = multiples[index];
-            if (!invokable.enabled) {
-                continue;
-            }
-
             (bool success, uint256 balance) = _invoke(
                 multiples[index],
                 beneficiary
@@ -90,9 +79,7 @@ contract VCrunchToken is Ownable {
         string calldata signature
     ) internal {
         // uint256 index = invokables.length;
-        invokables.push(
-            Invokable({target: target, signature: signature, enabled: true})
-        );
+        invokables.push(Invokable(target, signature));
 
         // TODO: This consume all of the gas...
         // (bool success, ) = _invoke(invokables[index]);
