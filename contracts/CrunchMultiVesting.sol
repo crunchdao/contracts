@@ -192,11 +192,11 @@ contract CrunchMultiVesting is Ownable {
     /**
      * @notice Release a vesting of a specified address by its `index`.
      * @dev The caller must be the owner.
-     * @param addr Address to release.
+     * @param beneficiary Address to release.
      * @param index The vesting index to release.
      */
-    function releaseFor(address addr, uint256 index) external onlyOwner {
-        _release(addr, index);
+    function releaseFor(address beneficiary, uint256 index) external onlyOwner {
+        _release(beneficiary, index);
     }
 
     /**
@@ -213,24 +213,24 @@ contract CrunchMultiVesting is Ownable {
      * @dev Multiple `TokensReleased` event might be emitted.
      * @dev The transaction will fail if no token are due.
      */
-    function releaseAllFor(address addr) external onlyOwner {
-        _releaseAll(addr);
+    function releaseAllFor(address beneficiary) external onlyOwner {
+        _releaseAll(beneficiary);
     }
 
     /**
      * @notice Get the total of releasable amount of tokens by doing the sum of all of the currently active vestings.
-     * @param addr Address to check.
+     * @param beneficiary Address to check.
      * @return total The sum of releasable amounts.
      */
-    function releasableAmount(address addr)
+    function releasableAmount(address beneficiary)
         public
         view
         returns (uint256 total)
     {
-        uint256 size = vestingsCount(addr);
+        uint256 size = vestingsCount(beneficiary);
 
         for (uint256 index = 0; index < size; index++) {
-            Vesting storage vesting = _getVesting(addr, index);
+            Vesting storage vesting = _getVesting(beneficiary, index);
 
             total += _releasableAmount(vesting);
         }
@@ -238,30 +238,30 @@ contract CrunchMultiVesting is Ownable {
 
     /**
      * @notice Get the releasable amount of tokens of a vesting by its `index`.
-     * @param addr Address to check.
+     * @param beneficiary Address to check.
      * @param index Vesting index to check.
      * @return The releasable amount of tokens of the found vesting.
      */
-    function releasableAmountAt(address addr, uint256 index)
+    function releasableAmountAt(address beneficiary, uint256 index)
         external
         view
         returns (uint256)
     {
-        Vesting storage vesting = _getVesting(addr, index);
+        Vesting storage vesting = _getVesting(beneficiary, index);
 
         return _releasableAmount(vesting);
     }
 
     /**
      * @notice Get the sum of all vested amount of tokens.
-     * @param addr Address to check.
+     * @param beneficiary Address to check.
      * @return total The sum of vested amount of all of the vestings.
      */
-    function vestedAmount(address addr) public view returns (uint256 total) {
-        uint256 size = vestingsCount(addr);
+    function vestedAmount(address beneficiary) public view returns (uint256 total) {
+        uint256 size = vestingsCount(beneficiary);
 
         for (uint256 index = 0; index < size; index++) {
-            Vesting storage vesting = _getVesting(addr, index);
+            Vesting storage vesting = _getVesting(beneficiary, index);
 
             total += _vestedAmount(vesting);
         }
@@ -269,16 +269,16 @@ contract CrunchMultiVesting is Ownable {
 
     /**
      * @notice Get the vested amount of tokens of a vesting by its `index`.
-     * @param addr Address to check.
+     * @param beneficiary Address to check.
      * @param index Address to check.
      * @return The vested amount of the found vesting.
      */
-    function vestedAmountAt(address addr, uint256 index)
+    function vestedAmountAt(address beneficiary, uint256 index)
         external
         view
         returns (uint256)
     {
-        Vesting storage vesting = _getVesting(addr, index);
+        Vesting storage vesting = _getVesting(beneficiary, index);
 
         return _vestedAmount(vesting);
     }
@@ -286,14 +286,14 @@ contract CrunchMultiVesting is Ownable {
     /**
      * @notice Get the sum of all remaining amount of tokens of each vesting of a beneficiary.
      * @dev This function is to make wallets able to display the amount in their UI.
-     * @param addr Address to check.
+     * @param beneficiary Address to check.
      * @return total The sum of all remaining amount of tokens.
      */
-    function balanceOf(address addr) external view returns (uint256 total) {
-        uint256 size = vestingsCount(addr);
+    function balanceOf(address beneficiary) external view returns (uint256 total) {
+        uint256 size = vestingsCount(beneficiary);
 
         for (uint256 index = 0; index < size; index++) {
-            Vesting storage vesting = _getVesting(addr, index);
+            Vesting storage vesting = _getVesting(beneficiary, index);
 
             total += vesting.amount - vesting.released;
         }
@@ -359,11 +359,11 @@ contract CrunchMultiVesting is Ownable {
      * @dev The methods will fail if there is no tokens due.
      * @dev A `TokensReleased` event will be emitted.
      * @dev If the vesting's released tokens is the same of the vesting's amount, the vesting is considered as finished, and will be removed from the active list.
-     * @param addr Address to release.
+     * @param beneficiary Address to release.
      * @param index Vesting index to release.
      */
-    function _release(address addr, uint256 index) internal {
-        Vesting storage vesting = _getVesting(addr, index);
+    function _release(address beneficiary, uint256 index) internal {
+        Vesting storage vesting = _getVesting(beneficiary, index);
 
         uint256 unreleased = _releasableAmount(vesting);
         require(unreleased > 0, "MultiVesting: no tokens are due");
@@ -377,7 +377,7 @@ contract CrunchMultiVesting is Ownable {
         emit TokensReleased(vesting.beneficiary, index, unreleased);
 
         if (vesting.released == vesting.amount) {
-            _removeActive(addr, index);
+            _removeActive(beneficiary, index);
         }
     }
 
@@ -386,15 +386,15 @@ contract CrunchMultiVesting is Ownable {
      * @dev The methods will fail if there is no tokens due for all of the vestings.
      * @dev Multiple `TokensReleased` event may be emitted.
      * @dev If some vesting's released tokens is the same of their amount, they will considered as finished, and will be removed from the active list.
-     * @param addr Address to release.
+     * @param beneficiary Address to release.
      */
-    function _releaseAll(address addr) internal {
+    function _releaseAll(address beneficiary) internal {
         uint256 totalReleased;
 
-        uint256[] storage actives = _actives[addr];
+        uint256[] storage actives = _actives[beneficiary];
         for (uint256 activeIndex = 0; activeIndex < actives.length; ) {
             uint256 index = actives[activeIndex];
-            Vesting storage vesting = _getVesting(addr, index);
+            Vesting storage vesting = _getVesting(beneficiary, index);
 
             uint256 unreleased = _releasableAmount(vesting);
             if (unreleased == 0) {
@@ -410,7 +410,7 @@ contract CrunchMultiVesting is Ownable {
             emit TokensReleased(vesting.beneficiary, index, unreleased);
 
             if (vesting.released == vesting.amount) {
-                _removeActiveAt(addr, activeIndex);
+                _removeActiveAt(beneficiary, activeIndex);
             } else {
                 activeIndex++;
             }
@@ -423,11 +423,11 @@ contract CrunchMultiVesting is Ownable {
 
     /**
      * @dev Pop from the active list at a specified index.
-     * @param addr Address to get the active list from.
+     * @param beneficiary Address to get the active list from.
      * @param activeIndex Active list's index to pop.
      */
-    function _removeActiveAt(address addr, uint256 activeIndex) internal {
-        uint256[] storage actives = _actives[addr];
+    function _removeActiveAt(address beneficiary, uint256 activeIndex) internal {
+        uint256[] storage actives = _actives[beneficiary];
 
         actives[activeIndex] = actives[actives.length - 1];
 
@@ -437,11 +437,11 @@ contract CrunchMultiVesting is Ownable {
     /**
      * @dev Find the active index of a vesting index, and pop it with `_removeActiveAt(address, uint256)`.
      * @dev The method will fail if the active index is not found.
-     * @param addr Address to get the active list from.
+     * @param beneficiary Address to get the active list from.
      * @param index Vesting index to find and pop.
      */
-    function _removeActive(address addr, uint256 index) internal {
-        uint256[] storage actives = _actives[addr];
+    function _removeActive(address beneficiary, uint256 index) internal {
+        uint256[] storage actives = _actives[beneficiary];
 
         for (
             uint256 activeIndex = 0;
@@ -449,7 +449,7 @@ contract CrunchMultiVesting is Ownable {
             activeIndex++
         ) {
             if (actives[activeIndex] == index) {
-                _removeActiveAt(addr, activeIndex);
+                _removeActiveAt(beneficiary, activeIndex);
                 return;
             }
         }
