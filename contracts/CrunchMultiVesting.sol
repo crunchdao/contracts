@@ -80,7 +80,7 @@ contract CrunchMultiVesting is Ownable {
      * @return the contract 'fake' token name.
      */
     function name() external pure returns (string memory) {
-        return "Vested CRUNCH Token";
+        return "Vested CRUNCH Token (multi)";
     }
 
     /**
@@ -88,7 +88,7 @@ contract CrunchMultiVesting is Ownable {
      * @return the contract 'fake' token symbol.
      */
     function symbol() external pure returns (string memory) {
-        return "vCRUNCH";
+        return "mvCRUNCH";
     }
 
     /**
