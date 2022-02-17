@@ -1413,25 +1413,26 @@ contract("Crunch Multi Vesting", async ([owner, user, ...accounts]) => {
 
     await expect(
       multiVesting.balanceOf(beneficiary)
-    ).to.eventually.be.a.bignumber.equal(ZERO);
+    ).to.eventually.be.a.bignumber.equal(TEN);
 
     await advance.timeAndBlock(timeHelper.days(2));
+
+    await expect(multiVesting.releaseAllFor(beneficiary)).to.eventually.be
+      .fulfilled;
+
+    await expect(
+      multiVesting.balanceOf(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(TEN.sub(TWO));
+
+    await advance.timeAndBlock(timeHelper.days(6));
+
+    await expect(multiVesting.releaseAllFor(beneficiary)).to.eventually.be;
 
     await expect(
       multiVesting.balanceOf(beneficiary)
     ).to.eventually.be.a.bignumber.equal(TWO);
 
-    await advance.timeAndBlock(timeHelper.days(8));
-
-    await expect(
-      multiVesting.balanceOf(beneficiary)
-    ).to.eventually.be.a.bignumber.equal(TEN);
-
-    await advance.timeAndBlock(timeHelper.days(1));
-
-    await expect(
-      multiVesting.balanceOf(beneficiary)
-    ).to.eventually.be.a.bignumber.equal(TEN);
+    await advance.timeAndBlock(timeHelper.days(2));
 
     await expect(multiVesting.releaseAllFor(beneficiary)).to.eventually.be
       .fulfilled;
@@ -1457,57 +1458,63 @@ contract("Crunch Multi Vesting", async ([owner, user, ...accounts]) => {
 
     await expect(
       multiVesting.balanceOf(beneficiary)
-    ).to.eventually.be.a.bignumber.equal(ZERO);
+    ).to.eventually.be.a.bignumber.equal(TEN);
 
     await advance.timeAndBlock(timeHelper.days(2));
-
-    await expect(
-      multiVesting.balanceOf(beneficiary)
-    ).to.eventually.be.a.bignumber.equal(TWO);
 
     await expect(multiVesting.create(beneficiary, TEN, TWO_DAYS, TEN_DAYS)).to
       .be.fulfilled;
 
     await expect(
       multiVesting.balanceOf(beneficiary)
-    ).to.eventually.be.a.bignumber.equal(TWO);
+    ).to.eventually.be.a.bignumber.equal(TEN.add(TEN));
 
     await advance.timeAndBlock(timeHelper.days(2));
-
-    await expect(
-      multiVesting.balanceOf(beneficiary)
-    ).to.eventually.be.a.bignumber.equal(FOUR.add(TWO));
 
     await expect(multiVesting.create(beneficiary, TEN, TWO_DAYS, TEN_DAYS)).to
       .be.fulfilled;
 
     await expect(
       multiVesting.balanceOf(beneficiary)
-    ).to.eventually.be.a.bignumber.equal(FOUR.add(TWO));
+    ).to.eventually.be.a.bignumber.equal(TEN.add(TEN).add(TEN));
 
     await advance.timeAndBlock(timeHelper.days(2));
 
-    await expect(
-      multiVesting.balanceOf(beneficiary)
-    ).to.eventually.be.a.bignumber.equal(SIX.add(FOUR).add(TWO));
-
-    await advance.timeAndBlock(timeHelper.days(4));
+    await expect(multiVesting.releaseFor(beneficiary, ZERO)).to.be.fulfilled;
 
     await expect(
       multiVesting.balanceOf(beneficiary)
-    ).to.eventually.be.a.bignumber.equal(TEN.add(EIGHT).add(SIX));
+    ).to.eventually.be.a.bignumber.equal(FOUR.add(TEN).add(TEN));
+
+    await expect(multiVesting.releaseFor(beneficiary, TWO)).to.be.fulfilled;
+
+    await expect(
+      multiVesting.balanceOf(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(FOUR.add(TEN).add(EIGHT));
 
     await expect(multiVesting.releaseAllFor(beneficiary)).to.be.fulfilled;
 
     await expect(
       multiVesting.balanceOf(beneficiary)
-    ).to.eventually.be.a.bignumber.equal(ZERO);
+    ).to.eventually.be.a.bignumber.equal(FOUR.add(SIX).add(EIGHT));
 
-    await advance.timeAndBlock(timeHelper.days(10));
+    await advance.timeAndBlock(timeHelper.days(2));
+
+    await expect(multiVesting.releaseAllFor(beneficiary)).to.be.fulfilled;
 
     await expect(
       multiVesting.balanceOf(beneficiary)
-    ).to.eventually.be.a.bignumber.equal(TWO.add(FOUR));
+    ).to.eventually.be.a.bignumber.equal(TWO.add(FOUR).add(SIX));
+
+    await advance.timeAndBlock(timeHelper.days(4));
+
+    await expect(multiVesting.releaseAllFor(beneficiary)).to.be.fulfilled;
+
+    await expect(
+      multiVesting.balanceOf(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(TWO);
+
+    await advance.timeAndBlock(timeHelper.days(2));
 
     await expect(multiVesting.releaseAllFor(beneficiary)).to.be.fulfilled;
 
@@ -1593,7 +1600,7 @@ contract("Crunch Multi Vesting", async ([owner, user, ...accounts]) => {
       .to.eventually.have.property(1)
       .and.bignumber.equal(ONE);
 
-      await advance.timeAndBlock(THREE_DAYS);
+    await advance.timeAndBlock(THREE_DAYS);
 
     await expect(multiVesting.releaseAllFor(beneficiary)).to.be.fulfilled;
 
@@ -1620,9 +1627,9 @@ contract("Crunch Multi Vesting", async ([owner, user, ...accounts]) => {
       from: beneficiary,
     };
 
-    await expect(
-      multiVesting.totalSupply()
-    ).to.eventually.be.a.bignumber.equal(ZERO);
+    await expect(multiVesting.totalSupply()).to.eventually.be.a.bignumber.equal(
+      ZERO
+    );
 
     await expect(crunch.transfer(multiVesting.address, amount)).to.be.fulfilled;
 
@@ -1631,9 +1638,9 @@ contract("Crunch Multi Vesting", async ([owner, user, ...accounts]) => {
       multiVesting.create(beneficiary, amount, cliffDuration, duration)
     ).to.be.fulfilled;
 
-    await expect(
-      multiVesting.totalSupply()
-    ).to.eventually.be.a.bignumber.equal(amount);
+    await expect(multiVesting.totalSupply()).to.eventually.be.a.bignumber.equal(
+      amount
+    );
 
     await advance.timeAndBlock(timeHelper.days(5));
 
@@ -1644,37 +1651,37 @@ contract("Crunch Multi Vesting", async ([owner, user, ...accounts]) => {
       multiVesting.create(beneficiary, amount, cliffDuration, duration)
     ).to.be.fulfilled;
 
-    await expect(
-      multiVesting.totalSupply()
-    ).to.eventually.be.a.bignumber.equal(amount.muln(2));
+    await expect(multiVesting.totalSupply()).to.eventually.be.a.bignumber.equal(
+      amount.muln(2)
+    );
 
     await expect(multiVesting.release(index, fromBeneficiary)).to.be.fulfilled;
 
-    await expect(
-      multiVesting.totalSupply()
-    ).to.eventually.be.a.bignumber.equal(new BN("150"));
+    await expect(multiVesting.totalSupply()).to.eventually.be.a.bignumber.equal(
+      new BN("150")
+    );
 
     await advance.timeAndBlock(timeHelper.days(5));
 
     await expect(multiVesting.release(index, fromBeneficiary)).to.be.fulfilled;
 
-    await expect(
-      multiVesting.totalSupply()
-    ).to.eventually.be.a.bignumber.equal(new BN("100"));
+    await expect(multiVesting.totalSupply()).to.eventually.be.a.bignumber.equal(
+      new BN("100")
+    );
 
     await expect(multiVesting.release(index2, fromBeneficiary)).to.be.fulfilled;
 
-    await expect(
-      multiVesting.totalSupply()
-    ).to.eventually.be.a.bignumber.equal(new BN("50"));
+    await expect(multiVesting.totalSupply()).to.eventually.be.a.bignumber.equal(
+      new BN("50")
+    );
 
     await advance.timeAndBlock(timeHelper.days(5));
 
     await expect(multiVesting.release(index2, fromBeneficiary)).to.be.fulfilled;
 
-    await expect(
-      multiVesting.totalSupply()
-    ).to.eventually.be.a.bignumber.equal(ZERO);
+    await expect(multiVesting.totalSupply()).to.eventually.be.a.bignumber.equal(
+      ZERO
+    );
   });
 
   it("totalSupply() : using releaseAll()", async () => {
@@ -1687,9 +1694,9 @@ contract("Crunch Multi Vesting", async ([owner, user, ...accounts]) => {
       from: beneficiary,
     };
 
-    await expect(
-      multiVesting.totalSupply()
-    ).to.eventually.be.a.bignumber.equal(ZERO);
+    await expect(multiVesting.totalSupply()).to.eventually.be.a.bignumber.equal(
+      ZERO
+    );
 
     await expect(crunch.transfer(multiVesting.address, amount)).to.be.fulfilled;
 
@@ -1697,9 +1704,9 @@ contract("Crunch Multi Vesting", async ([owner, user, ...accounts]) => {
       multiVesting.create(beneficiary, amount, cliffDuration, duration)
     ).to.be.fulfilled;
 
-    await expect(
-      multiVesting.totalSupply()
-    ).to.eventually.be.a.bignumber.equal(amount);
+    await expect(multiVesting.totalSupply()).to.eventually.be.a.bignumber.equal(
+      amount
+    );
 
     await advance.timeAndBlock(timeHelper.days(5));
 
@@ -1709,23 +1716,21 @@ contract("Crunch Multi Vesting", async ([owner, user, ...accounts]) => {
       multiVesting.create(beneficiary, amount, cliffDuration, duration)
     ).to.be.fulfilled;
 
-    await expect(
-      multiVesting.totalSupply()
-    ).to.eventually.be.a.bignumber.equal(amount.muln(2));
+    await expect(multiVesting.totalSupply()).to.eventually.be.a.bignumber.equal(
+      amount.muln(2)
+    );
 
     await expect(multiVesting.releaseAll(fromBeneficiary)).to.be.fulfilled;
 
-    await expect(
-      multiVesting.totalSupply()
-    ).to.eventually.be.a.bignumber.equal(amount.muln(2).sub(amount.divn(2)));
+    await expect(multiVesting.totalSupply()).to.eventually.be.a.bignumber.equal(
+      amount.muln(2).sub(amount.divn(2))
+    );
 
     await advance.timeAndBlock(timeHelper.days(5));
 
     await expect(multiVesting.releaseAll(fromBeneficiary)).to.be.fulfilled;
 
-    await expect(
-      multiVesting.totalSupply()
-    ).to.eventually.be.a.bignumber.equal(
+    await expect(multiVesting.totalSupply()).to.eventually.be.a.bignumber.equal(
       amount.muln(2).sub(amount.add(amount.divn(2)))
     );
 
@@ -1733,9 +1738,9 @@ contract("Crunch Multi Vesting", async ([owner, user, ...accounts]) => {
 
     await expect(multiVesting.releaseAll(fromBeneficiary)).to.be.fulfilled;
 
-    await expect(
-      multiVesting.totalSupply()
-    ).to.eventually.be.a.bignumber.equal(ZERO);
+    await expect(multiVesting.totalSupply()).to.eventually.be.a.bignumber.equal(
+      ZERO
+    );
   });
 
   it("availableReserve()", async () => {
@@ -1768,7 +1773,8 @@ contract("Crunch Multi Vesting", async ([owner, user, ...accounts]) => {
 
     await advance.timeAndBlock(timeHelper.days(5));
 
-    await expect(crunch.transfer(multiVesting.address, amount.muln(2))).to.be.fulfilled;
+    await expect(crunch.transfer(multiVesting.address, amount.muln(2))).to.be
+      .fulfilled;
 
     await expect(
       multiVesting.availableReserve()
