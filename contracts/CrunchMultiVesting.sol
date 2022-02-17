@@ -284,13 +284,19 @@ contract CrunchMultiVesting is Ownable {
     }
 
     /**
-     * @notice Get the sum of all releasable amount of tokens. (same as `releasableAmount(address)`)
+     * @notice Get the sum of all remaining amount of tokens of each vesting of a beneficiary.
      * @dev This function is to make wallets able to display the amount in their UI.
      * @param addr Address to check.
-     * @return The sum of all releasable amount of tokens.
+     * @return total The sum of all remaining amount of tokens.
      */
-    function balanceOf(address addr) external view returns (uint256) {
-        return releasableAmount(addr);
+    function balanceOf(address addr) external view returns (uint256 total) {
+        uint256 size = vestingsCount(addr);
+
+        for (uint256 index = 0; index < size; index++) {
+            Vesting storage vesting = _getVesting(addr, index);
+
+            total += vesting.amount - vesting.released;
+        }
     }
 
     /**
