@@ -2,7 +2,7 @@
 pragma solidity ^0.8.2;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 contract CrunchVestingV2 is Ownable {
     event TokensReleased(uint256 amount);
@@ -11,7 +11,7 @@ contract CrunchVestingV2 is Ownable {
     event BeneficiaryTransferred(address indexed previousBeneficiary, address indexed newBeneficiary);
 
     /* CRUNCH erc20 address. */
-    IERC20 public crunch;
+    IERC20Metadata public crunch;
 
     /* beneficiary of tokens after they are released. */
     address public beneficiary;
@@ -33,7 +33,7 @@ contract CrunchVestingV2 is Ownable {
     bool public revoked;
 
     constructor(
-        IERC20 _crunch,
+        IERC20Metadata _crunch,
         address _beneficiary,
         uint256 _cliffDuration,
         uint256 _duration,
@@ -55,6 +55,30 @@ contract CrunchVestingV2 is Ownable {
         cliff = start + _cliffDuration;
         duration = _duration;
         revokable = _revokable;
+    }
+	
+    /**
+     * @notice Fake an ERC20-like contract allowing it to be displayed from wallets.
+     * @return the contract 'fake' token name.
+     */
+    function name() external pure returns (string memory) {
+        return "Vested CRUNCH Token (single)";
+    }
+
+    /**
+     * @notice Fake an ERC20-like contract allowing it to be displayed from wallets.
+     * @return the contract 'fake' token symbol.
+     */
+    function symbol() external pure returns (string memory) {
+        return "svCRUNCH";
+    }
+
+    /**
+     * @notice Fake an ERC20-like contract allowing it to be displayed from wallets.
+     * @return the crunch's decimals value.
+     */
+    function decimals() external view returns (uint8) {
+        return crunch.decimals();
     }
 
     /** @notice Transfers vested tokens to beneficiary. */
@@ -110,7 +134,22 @@ contract CrunchVestingV2 is Ownable {
         }
     }
 
-    function setCrunch(IERC20 newCrunch) external onlyOwner {
+    /**
+     * @notice Get the remaining amount of token for the vesting.
+     * @notice If the address is not the beneficiary, the method will return 0.
+     * @dev This function is to make wallets able to display the amount in their UI.
+     * @param addr Address to check.
+     * @return The remaining amount of tokens.
+     */
+    function balanceOf(address addr) external view returns (uint256) {
+        if (addr != beneficiary) {
+			return 0;
+		}
+
+		return remainingAmount();
+    }
+
+    function setCrunch(IERC20Metadata newCrunch) external onlyOwner {
         require(
             address(newCrunch) != address(0),
             "Vesting: new crunch cannot be null"
