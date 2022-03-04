@@ -69,6 +69,18 @@ module.exports = {
       networkCheckTimeout: 1000000,
     },
 
+    gorli: {
+      provider: function () {
+        return new HDWalletProvider(
+          process.env.MNEMONIC,
+          `wss://goerli.infura.io/ws/v3/${process.env.INFURA_PROJECT}`
+        );
+      },
+      network_id: 5,
+      websocket: true,
+      networkCheckTimeout: 1000000,
+    },
+
     // Useful for testing. The `development` name is special - truffle uses it by default
     // if it's defined here and no other network is specified at the command line.
     // You should run a client (like ganache-cli, geth or parity) in a separate terminal
