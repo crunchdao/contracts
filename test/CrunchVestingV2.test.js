@@ -76,6 +76,84 @@ contract("Crunch Vesting", async (accounts) => {
     );
   });
 
+  it("revoke()", async () => {
+    vesting = await createVesting({ revokable: true });
+
+    await expect(vesting.revoke()).to.be.fulfilled;
+    await expect(vesting.revoked()).to.eventually.be.equal(true);
+  });
+
+  it("revoke() : not revokable", async () => {
+    vesting = await createVesting({ revokable: false });
+
+    await expect(vesting.revoke()).to.be.rejectedWith(
+      Error,
+      "Vesting: token not revokable"
+    );
+  });
+
+  it("revoke() : two time", async () => {
+    vesting = await createVesting({ revokable: true });
+
+    await expect(vesting.revoke()).to.be.fulfilled;
+    await expect(vesting.revoked()).to.eventually.be.equal(true);
+    await expect(vesting.revoke()).to.be.rejectedWith(
+      Error,
+      "Vesting: token already revoked"
+    );
+  });
+
+  it("revoke() : before cliff", async () => {
+    vesting = await createVesting({ revokable: true });
+
+    const amount = new BN(100);
+    await expect(crunch.transfer(vesting.address, amount)).to.be.fulfilled;
+
+    await expect(vesting.revoke()).to.be.fulfilled;
+
+    await expect(
+      crunch.balanceOf(vesting.address)
+    ).to.eventually.be.a.bignumber.equal(ZERO);
+
+    await expect(
+      crunch.balanceOf(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(ZERO);
+
+    await expect(crunch.balanceOf(owner)).to.eventually.be.a.bignumber.equal(
+      await crunch.totalSupply()
+    );
+  });
+
+  it("revoke() : after cliff", async () => {
+    vesting = await createVesting({ revokable: true });
+
+    const amount = new BN(100);
+    await expect(crunch.transfer(vesting.address, amount)).to.be.fulfilled;
+
+    await advance.timeAndBlock(defaults.cliff);
+
+    await expect(vesting.revoke()).to.be.fulfilled;
+
+    await expect(
+      crunch.balanceOf(vesting.address)
+    ).to.eventually.be.a.bignumber.equal(new BN(20));
+
+    await expect(crunch.balanceOf(owner)).to.eventually.be.a.bignumber.equal(
+      (await crunch.totalSupply()).subn(20)
+    );
+  });
+
+  it("revoke() : after setUnrevokable()", async () => {
+    vesting = await createVesting({ revokable: true });
+
+    await expect(vesting.setUnrevokable()).to.be.fulfilled;
+
+    await expect(vesting.revoke()).to.be.rejectedWith(
+      Error,
+      "Vesting: token not revokable"
+    );
+  });
+
   it("remainingAmount()", async () => {
     vesting = await createVesting();
 
@@ -185,23 +263,23 @@ contract("Crunch Vesting", async (accounts) => {
   });
 
   it("setUnrevokable() : revoked", async () => {
-      try {
-        vesting = await createVesting({ revokable: true });
-    
-        await expect(vesting.revoke()).to.be.fulfilled;
-    
-        await expect(vesting.setUnrevokable(fromBeneficiary)).to.be.rejectedWith(
-          Error,
-          "Ownable: caller is not the owner"
-        );
-    
-        await expect(vesting.setUnrevokable()).to.be.rejectedWith(
-          Error,
-          "Vesting: already revoked"
-        );
-      } catch (error) {
-          console.log(error)
-      }
+    try {
+      vesting = await createVesting({ revokable: true });
+
+      await expect(vesting.revoke()).to.be.fulfilled;
+
+      await expect(vesting.setUnrevokable(fromBeneficiary)).to.be.rejectedWith(
+        Error,
+        "Ownable: caller is not the owner"
+      );
+
+      await expect(vesting.setUnrevokable()).to.be.rejectedWith(
+        Error,
+        "Vesting: already revoked"
+      );
+    } catch (error) {
+      console.log(error);
+    }
   });
 
   it("setCrunch(address)", async () => {
