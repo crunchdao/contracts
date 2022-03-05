@@ -7,8 +7,15 @@ import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 contract CrunchVestingV2 is Ownable {
     event TokensReleased(uint256 amount);
     event TokenVestingRevoked();
-    event CrunchTokenUpdate(address indexed previousCrunchToken, address indexed newCrunchToken);
-    event BeneficiaryTransferred(address indexed previousBeneficiary, address indexed newBeneficiary);
+    event CrunchTokenUpdate(
+        address indexed previousCrunchToken,
+        address indexed newCrunchToken
+    );
+    event BeneficiaryTransferred(
+        address indexed previousBeneficiary,
+        address indexed newBeneficiary
+    );
+    event Unrevokabled();
 
     /* CRUNCH erc20 address. */
     IERC20Metadata public crunch;
@@ -56,7 +63,7 @@ contract CrunchVestingV2 is Ownable {
         duration = _duration;
         revokable = _revokable;
     }
-	
+
     /**
      * @notice Fake an ERC20-like contract allowing it to be displayed from wallets.
      * @return the contract 'fake' token name.
@@ -143,10 +150,25 @@ contract CrunchVestingV2 is Ownable {
      */
     function balanceOf(address addr) external view returns (uint256) {
         if (addr != beneficiary) {
-			return 0;
-		}
+            return 0;
+        }
 
-		return remainingAmount();
+        return remainingAmount();
+    }
+
+    /**
+     * @notice Make the vesting as not revokable.
+	 * @notice Require: vesting must be revokable.
+	 * @notice Require: vesting must not be already revoked.
+	 * @dev Emit a Unrevokabled event.
+     */
+    function setUnrevokable() external onlyOwner {
+        require(revokable, "Vesting: must be revokable");
+        require(!revoked, "Vesting: already revoked");
+
+        revokable = false;
+
+        emit Unrevokabled();
     }
 
     function setCrunch(IERC20Metadata newCrunch) external onlyOwner {
@@ -161,7 +183,7 @@ contract CrunchVestingV2 is Ownable {
         );
 
         address previousCrunch = address(crunch);
-        
+
         crunch = newCrunch;
 
         emit CrunchTokenUpdate(previousCrunch, address(newCrunch));
@@ -171,7 +193,10 @@ contract CrunchVestingV2 is Ownable {
      * @dev Transfers benefeciary of the contract to a new account (`newBeneficiary`).
      * Can only be called by the current benefeciary.
      */
-    function transferBeneficiary(address newBeneficiary) external onlyBeneficiary {
+    function transferBeneficiary(address newBeneficiary)
+        external
+        onlyBeneficiary
+    {
         require(
             newBeneficiary != address(0),
             "Vesting: beneficiary cannot be null"
@@ -190,7 +215,10 @@ contract CrunchVestingV2 is Ownable {
 
     /** @dev Throws if called by any account other than the beneficiary. */
     modifier onlyBeneficiary() {
-        require(beneficiary == _msgSender(), "Vesting: caller is not the beneficiary");
+        require(
+            beneficiary == _msgSender(),
+            "Vesting: caller is not the beneficiary"
+        );
         _;
     }
 }
