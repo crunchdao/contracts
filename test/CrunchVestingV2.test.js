@@ -326,7 +326,58 @@ contract("Crunch Vesting V2", async (accounts) => {
     );
   });
 
-  // releasableAmount
+  it("releasableAmount()", async () => {
+    vesting = await createVesting();
+
+    const amount = new BN(100);
+    await expect(crunch.transfer(vesting.address, amount)).to.be.fulfilled;
+
+    await expect(vesting.releasableAmount()).to.eventually.be.a.bignumber.equal(
+      ZERO
+    );
+
+    await advance.timeAndBlock(defaults.cliff.divn(2));
+
+    await expect(vesting.releasableAmount()).to.eventually.be.a.bignumber.equal(
+      ZERO
+    );
+
+    await advance.timeAndBlock(defaults.cliff.divn(2));
+
+    await expect(vesting.releasableAmount()).to.eventually.be.a.bignumber.equal(
+      new BN(20)
+    );
+
+    await expect(vesting.release()).to.be.fulfilled;
+
+    await expect(vesting.releasableAmount()).to.eventually.be.a.bignumber.equal(
+      ZERO
+    );
+
+    await advance.timeAndBlock(defaults.duration.divn(2));
+
+    await expect(vesting.releasableAmount()).to.eventually.be.a.bignumber.equal(
+      new BN(50)
+    );
+
+    await expect(vesting.release()).to.be.fulfilled;
+
+    await expect(vesting.releasableAmount()).to.eventually.be.a.bignumber.equal(
+      ZERO
+    );
+
+    await advance.timeAndBlock(defaults.duration.divn(2));
+
+    await expect(vesting.releasableAmount()).to.eventually.be.a.bignumber.equal(
+      new BN(30)
+    );
+
+    await expect(vesting.release()).to.be.fulfilled;
+
+    await expect(vesting.releasableAmount()).to.eventually.be.a.bignumber.equal(
+      ZERO
+    );
+  });
 
   it("vestedAmount()", async () => {
     vesting = await createVesting();
