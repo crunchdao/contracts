@@ -7,7 +7,7 @@ const CrunchVestingV2 = artifacts.require("CrunchVestingV2");
 
 const ZERO = new BN("0");
 
-contract("Crunch Vesting", async (accounts) => {
+contract("Crunch Vesting V2", async (accounts) => {
   let crunch;
   let vesting;
 
@@ -324,6 +324,86 @@ contract("Crunch Vesting", async (accounts) => {
     await expect(vesting.remainingAmount()).to.eventually.be.a.bignumber.equal(
       ZERO
     );
+  });
+
+  // releasableAmount
+
+  it("vestedAmount()", async () => {
+    vesting = await createVesting();
+
+    const amount = new BN(100);
+    await expect(crunch.transfer(vesting.address, amount)).to.be.fulfilled;
+
+    await expect(vesting.vestedAmount()).to.eventually.be.a.bignumber.equal(
+      ZERO
+    );
+
+    await advance.timeAndBlock(defaults.cliff.divn(2));
+
+    await expect(vesting.vestedAmount()).to.eventually.be.a.bignumber.equal(
+      ZERO
+    );
+
+    await advance.timeAndBlock(defaults.cliff.divn(2));
+
+    await expect(vesting.vestedAmount()).to.eventually.be.a.bignumber.equal(
+      new BN(20)
+    );
+
+    await advance.timeAndBlock(defaults.duration.divn(2));
+
+    await expect(vesting.vestedAmount()).to.eventually.be.a.bignumber.equal(
+      new BN(70)
+    );
+
+    await advance.timeAndBlock(defaults.duration.divn(2));
+
+    await expect(vesting.vestedAmount()).to.eventually.be.a.bignumber.equal(
+      new BN(amount)
+    );
+  });
+
+  it("vestedAmount() : with release()", async () => {
+    vesting = await createVesting();
+
+    const amount = new BN(100);
+    await expect(crunch.transfer(vesting.address, amount)).to.be.fulfilled;
+
+    await expect(vesting.vestedAmount()).to.eventually.be.a.bignumber.equal(
+      ZERO
+    );
+
+    await advance.timeAndBlock(defaults.cliff.divn(2));
+
+    await expect(vesting.vestedAmount()).to.eventually.be.a.bignumber.equal(
+      ZERO
+    );
+
+    await expect(vesting.release()).to.be.rejected;
+
+    await advance.timeAndBlock(defaults.cliff.divn(2));
+
+    await expect(vesting.vestedAmount()).to.eventually.be.a.bignumber.equal(
+      new BN(20)
+    );
+
+    await expect(vesting.release()).to.be.fulfilled;
+
+    await advance.timeAndBlock(defaults.duration.divn(2));
+
+    await expect(vesting.vestedAmount()).to.eventually.be.a.bignumber.equal(
+      new BN(70)
+    );
+
+    await expect(vesting.release()).to.be.fulfilled;
+
+    await advance.timeAndBlock(defaults.duration.divn(2));
+
+    await expect(vesting.vestedAmount()).to.eventually.be.a.bignumber.equal(
+      new BN(amount)
+    );
+
+    await expect(vesting.release()).to.be.fulfilled;
   });
 
   it("balanceOf(address) : beneficiary", async () => {
