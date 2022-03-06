@@ -1,5 +1,7 @@
 # CRUNCH DAO CONTRACTS
 
+[![Truffle Build](https://github.com/datacrunch-com/datacrunch-contracts/actions/workflows/truffle.yml/badge.svg)](https://github.com/datacrunch-com/datacrunch-contracts/actions/workflows/truffle.yml)
+
 ## $CRUNCH Token
 
 Main $CRUNCH Token.
