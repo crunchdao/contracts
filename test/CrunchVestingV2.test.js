@@ -76,6 +76,147 @@ contract("Crunch Vesting", async (accounts) => {
     );
   });
 
+  it("release()", async () => {
+    vesting = await createVesting();
+
+    const amount = new BN(100);
+    await expect(crunch.transfer(vesting.address, amount)).to.be.fulfilled;
+
+    await expect(vesting.release()).to.be.rejectedWith(
+      Error,
+      "Vesting: no tokens are due"
+    );
+  });
+
+  it("release() : before cliff", async () => {
+    vesting = await createVesting();
+
+    const amount = new BN(100);
+    await expect(crunch.transfer(vesting.address, amount)).to.be.fulfilled;
+
+    await expect(vesting.release()).to.be.rejectedWith(
+      Error,
+      "Vesting: no tokens are due"
+    );
+
+    await advance.timeAndBlock(defaults.cliff);
+
+    await expect(vesting.release()).to.be.fulfilled;
+
+    await expect(
+      crunch.balanceOf(vesting.address)
+    ).to.eventually.be.a.bignumber.equal(amount.subn(20));
+
+    await expect(
+      crunch.balanceOf(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(new BN(20));
+
+    await advance.timeAndBlock(defaults.duration.divn(2).sub(defaults.cliff));
+
+    await expect(vesting.release()).to.be.fulfilled;
+
+    await expect(
+      crunch.balanceOf(vesting.address)
+    ).to.eventually.be.a.bignumber.equal(amount.subn(50));
+
+    await expect(
+      crunch.balanceOf(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(new BN(50));
+
+    await advance.timeAndBlock(defaults.duration.divn(2));
+
+    await expect(vesting.release()).to.be.fulfilled;
+
+    await expect(
+      crunch.balanceOf(vesting.address)
+    ).to.eventually.be.a.bignumber.equal(ZERO);
+
+    await expect(
+      crunch.balanceOf(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(amount);
+  });
+
+  it("release() : after cliff", async () => {
+    vesting = await createVesting();
+
+    const amount = new BN(100);
+    await expect(crunch.transfer(vesting.address, amount)).to.be.fulfilled;
+
+    await advance.timeAndBlock(defaults.cliff);
+
+    await expect(vesting.release()).to.be.fulfilled;
+  });
+
+  it("release() : two time", async () => {
+    vesting = await createVesting();
+
+    const amount = new BN(100);
+    await expect(crunch.transfer(vesting.address, amount)).to.be.fulfilled;
+
+    await advance.timeAndBlock(defaults.cliff);
+
+    await expect(vesting.release()).to.be.fulfilled;
+    await expect(vesting.release()).to.be.rejectedWith(
+      Error,
+      "Vesting: no tokens are due"
+    );
+  });
+
+  it("release() : after duration/2", async () => {
+    vesting = await createVesting();
+
+    const amount = new BN(100);
+    await expect(crunch.transfer(vesting.address, amount)).to.be.fulfilled;
+
+    await advance.timeAndBlock(defaults.duration.divn(2));
+
+    await expect(vesting.release()).to.be.fulfilled;
+
+    await expect(
+      crunch.balanceOf(vesting.address)
+    ).to.eventually.be.a.bignumber.equal(amount.divn(2));
+
+    await expect(
+      crunch.balanceOf(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(amount.divn(2));
+  });
+
+  it("release() : after revoke", async () => {
+    vesting = await createVesting({ revokable: true });
+
+    const amount = new BN(100);
+    await expect(crunch.transfer(vesting.address, amount)).to.be.fulfilled;
+
+    await advance.timeAndBlock(defaults.duration.divn(2));
+
+    await expect(vesting.release()).to.be.fulfilled;
+
+    await expect(
+      crunch.balanceOf(vesting.address)
+    ).to.eventually.be.a.bignumber.equal(amount.divn(2));
+
+    await expect(
+      crunch.balanceOf(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(amount.divn(2));
+
+    await expect(vesting.revoke()).to.be.fulfilled;
+
+    await expect(
+      crunch.balanceOf(vesting.address)
+    ).to.eventually.be.a.bignumber.equal(ZERO);
+
+    await expect(
+      crunch.balanceOf(beneficiary)
+    ).to.eventually.be.a.bignumber.equal(amount.divn(2));
+
+    await advance.timeAndBlock(defaults.duration.divn(2));
+
+    await expect(vesting.release()).to.be.rejectedWith(
+      Error,
+      "Vesting: no tokens are due"
+    );
+  });
+
   it("revoke()", async () => {
     vesting = await createVesting({ revokable: true });
 
