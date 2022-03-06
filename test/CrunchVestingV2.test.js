@@ -1,4 +1,5 @@
 const advance = require("./helper/advance");
+const block = require("./helper/block");
 const { expect, BN } = require("./helper/chai");
 const time = require("./helper/time");
 
@@ -40,6 +41,36 @@ contract("Crunch Vesting V2", async (accounts) => {
 
   beforeEach(async () => {
     crunch = await CrunchToken.new();
+  });
+
+  it("initial state", async () => {
+    vesting = await createVesting({ revokable: true });
+
+    const latest = await block.latest();
+
+    await expect(vesting.beneficiary()).to.eventually.be.a.equal(beneficiary);
+
+    await expect(vesting.released()).to.eventually.be.a.bignumber.equal(ZERO);
+
+    await expect(vesting.start()).to.eventually.be.a.bignumber.equal(
+      new BN(latest.timestamp)
+    );
+
+    await expect(vesting.cliff()).to.eventually.be.a.bignumber.equal(
+      new BN(latest.timestamp).add(defaults.cliff)
+    );
+
+    await expect(vesting.duration()).to.eventually.be.a.bignumber.equal(
+      defaults.duration
+    );
+
+    await expect(vesting.revokable()).to.eventually.be.equal(true);
+    await expect(vesting.revoked()).to.eventually.be.equal(false);
+
+    vesting = await createVesting({ revokable: false });
+
+    await expect(vesting.revokable()).to.eventually.be.equal(false);
+    await expect(vesting.revoked()).to.eventually.be.equal(false);
   });
 
   it("owner()", async () => {
