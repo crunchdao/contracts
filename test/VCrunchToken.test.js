@@ -104,7 +104,8 @@ contract("vCRUNCH Token", async (accounts) => {
       crunch.address,
       beneficiary,
       cliff,
-      duration
+      duration,
+      false
     );
 
     const target = vestingV2.address;
