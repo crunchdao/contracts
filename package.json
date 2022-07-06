@@ -4,7 +4,7 @@
   "description": "DataCrunch Token Contracts",
   "scripts": {
     "ganache": "ganache",
-    "test": "truffle test",
+    "test": "truffle test --stacktrace",
     "develop": "truffle develop"
   },
   "directories": {
