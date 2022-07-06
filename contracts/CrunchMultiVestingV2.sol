@@ -45,6 +45,10 @@ contract CrunchMultiVestingV2 is Ownable {
         uint256 duration;
         /** the amount of the token released. */
         uint256 released;
+        /** this vesting index. */
+        uint256 index;
+        /** if everything as been released. */
+        bool completed;
     }
 
     /* CRUNCH erc20 address. */
@@ -57,9 +61,6 @@ contract CrunchMultiVestingV2 is Ownable {
 
     /** mapping to vesting list */
     mapping(address => Vesting[]) public vestings;
-
-    /** mapping to a list of the currently active vestings index */
-    mapping(address => uint256[]) _actives;
 
     /**
      * @notice Instanciate a new contract.
@@ -139,18 +140,19 @@ contract CrunchMultiVestingV2 is Ownable {
             "MultiVesting: available reserve is not enough"
         );
 
+        uint256 index = vestings[beneficiary].length;
+
         vestings[beneficiary].push(
             Vesting({
                 beneficiary: beneficiary,
                 amount: amount,
                 cliffDuration: cliffDuration,
                 duration: duration,
-                released: 0
+                released: 0,
+                index: index,
+                completed: false
             })
         );
-
-        uint256 index = vestings[beneficiary].length - 1;
-        _actives[beneficiary].push(index);
 
         totalSupply += amount;
 
@@ -185,8 +187,8 @@ contract CrunchMultiVestingV2 is Ownable {
      * @dev The transaction will fail if no token are due.
      * @param index The vesting index to release.
      */
-    function release(uint256 index) external {
-        _release(_msgSender(), index);
+    function release(uint256 index) external returns (uint256) {
+        return _release(_msgSender(), index);
     }
 
     /**
@@ -195,8 +197,12 @@ contract CrunchMultiVestingV2 is Ownable {
      * @param beneficiary Address to release.
      * @param index The vesting index to release.
      */
-    function releaseFor(address beneficiary, uint256 index) external onlyOwner {
-        _release(beneficiary, index);
+    function releaseFor(address beneficiary, uint256 index)
+        external
+        onlyOwner
+        returns (uint256)
+    {
+        return _release(beneficiary, index);
     }
 
     /**
@@ -204,8 +210,8 @@ contract CrunchMultiVestingV2 is Ownable {
      * @dev Multiple `TokensReleased` event might be emitted.
      * @dev The transaction will fail if no token are due.
      */
-    function releaseAll() external {
-        _releaseAll(_msgSender());
+    function releaseAll() external returns (uint256) {
+        return _releaseAll(_msgSender());
     }
 
     /**
@@ -213,8 +219,12 @@ contract CrunchMultiVestingV2 is Ownable {
      * @dev Multiple `TokensReleased` event might be emitted.
      * @dev The transaction will fail if no token are due.
      */
-    function releaseAllFor(address beneficiary) external onlyOwner {
-        _releaseAll(beneficiary);
+    function releaseAllFor(address beneficiary)
+        external
+        onlyOwner
+        returns (uint256)
+    {
+        return _releaseAll(beneficiary);
     }
 
     /**
@@ -229,7 +239,7 @@ contract CrunchMultiVestingV2 is Ownable {
     {
         uint256 size = vestingsCount(beneficiary);
 
-        for (uint256 index = 0; index < size; index++) {
+        for (uint256 index = 0; index < size; ++index) {
             Vesting storage vesting = _getVesting(beneficiary, index);
 
             total += _releasableAmount(vesting);
@@ -264,7 +274,7 @@ contract CrunchMultiVestingV2 is Ownable {
     {
         uint256 size = vestingsCount(beneficiary);
 
-        for (uint256 index = 0; index < size; index++) {
+        for (uint256 index = 0; index < size; ++index) {
             Vesting storage vesting = _getVesting(beneficiary, index);
 
             total += _vestedAmount(vesting);
@@ -300,7 +310,7 @@ contract CrunchMultiVestingV2 is Ownable {
     {
         uint256 size = vestingsCount(beneficiary);
 
-        for (uint256 index = 0; index < size; index++) {
+        for (uint256 index = 0; index < size; ++index) {
             Vesting storage vesting = _getVesting(beneficiary, index);
 
             total += vesting.amount - vesting.released;
@@ -327,32 +337,6 @@ contract CrunchMultiVestingV2 is Ownable {
     }
 
     /**
-     * @notice Get the number of active vesting of an address.
-     * @param beneficiary Address to check.
-     * @return Number of active vesting.
-     */
-    function activeVestingsCount(address beneficiary)
-        public
-        view
-        returns (uint256)
-    {
-        return _actives[beneficiary].length;
-    }
-
-    /**
-     * @notice Get the active vestings index.
-     * @param beneficiary Address to check.
-     * @return An array of currently active vestings index.
-     */
-    function activeVestingsIndex(address beneficiary)
-        external
-        view
-        returns (uint256[] memory)
-    {
-        return _actives[beneficiary];
-    }
-
-    /**
      * @dev Internal implementation of the release() method.
      * @dev The methods will fail if there is no tokens due.
      * @dev A `TokensReleased` event will be emitted.
@@ -360,101 +344,60 @@ contract CrunchMultiVestingV2 is Ownable {
      * @param beneficiary Address to release.
      * @param index Vesting index to release.
      */
-    function _release(address beneficiary, uint256 index) internal {
-        Vesting storage vesting = _getVesting(beneficiary, index);
-
-        uint256 unreleased = _releasableAmount(vesting);
-        require(unreleased > 0, "MultiVesting: no tokens are due");
-
-        vesting.released += unreleased;
-
-        crunch.transfer(vesting.beneficiary, unreleased);
-
-        totalSupply -= unreleased;
-
-        emit TokensReleased(vesting.beneficiary, index, unreleased);
-
-        if (vesting.released == vesting.amount) {
-            _removeActive(beneficiary, index);
-        }
+    function _release(address beneficiary, uint256 index)
+        internal
+        returns (uint256 released)
+    {
+        released = _doRelease(beneficiary, index);
+        _checkReleased(released);
     }
 
     /**
      * @dev Internal implementation of the releaseAll() method.
      * @dev The methods will fail if there is no tokens due for all of the vestings.
      * @dev Multiple `TokensReleased` event may be emitted.
-     * @dev If some vesting's released tokens is the same of their amount, they will considered as finished, and will be removed from the active list.
+     * @dev If some vesting's released tokens is the same of their amount, they will considered as finished, and will be marked as completed.
      * @param beneficiary Address to release.
      */
-    function _releaseAll(address beneficiary) internal {
-        uint256 totalReleased;
+    function _releaseAll(address beneficiary)
+        internal
+        returns (uint256 released)
+    {
+        uint256 size = vestingsCount(beneficiary);
 
-        uint256[] storage actives = _actives[beneficiary];
-        for (uint256 activeIndex = 0; activeIndex < actives.length; ) {
-            uint256 index = actives[activeIndex];
-            Vesting storage vesting = _getVesting(beneficiary, index);
+        for (uint256 index = 0; index < size; ++index) {
+            released += _doRelease(beneficiary, index);
+        }
 
-            uint256 unreleased = _releasableAmount(vesting);
-            if (unreleased == 0) {
-                activeIndex++;
-                continue;
-            }
+        _checkReleased(released);
+    }
+
+    function _doRelease(address beneficiary, uint256 index) internal returns (uint256) {
+        Vesting storage vesting = _getVesting(beneficiary, index);
+
+        if (vesting.completed) {
+            return 0;
+        }
+
+        uint256 unreleased = _releasableAmount(vesting);
+        if (unreleased != 0) {
+            crunch.transfer(vesting.beneficiary, unreleased);
 
             vesting.released += unreleased;
             totalSupply -= unreleased;
 
-            crunch.transfer(vesting.beneficiary, unreleased);
-
-            emit TokensReleased(vesting.beneficiary, index, unreleased);
+            emit TokensReleased(vesting.beneficiary, vesting.index, unreleased);
 
             if (vesting.released == vesting.amount) {
-                _removeActiveAt(beneficiary, activeIndex);
-            } else {
-                activeIndex++;
-            }
-
-            totalReleased += unreleased;
-        }
-
-        require(totalReleased > 0, "MultiVesting: no tokens are due");
-    }
-
-    /**
-     * @dev Pop from the active list at a specified index.
-     * @param beneficiary Address to get the active list from.
-     * @param activeIndex Active list's index to pop.
-     */
-    function _removeActiveAt(address beneficiary, uint256 activeIndex)
-        internal
-    {
-        uint256[] storage actives = _actives[beneficiary];
-
-        actives[activeIndex] = actives[actives.length - 1];
-
-        actives.pop();
-    }
-
-    /**
-     * @dev Find the active index of a vesting index, and pop it with `_removeActiveAt(address, uint256)`.
-     * @dev The method will fail if the active index is not found.
-     * @param beneficiary Address to get the active list from.
-     * @param index Vesting index to find and pop.
-     */
-    function _removeActive(address beneficiary, uint256 index) internal {
-        uint256[] storage actives = _actives[beneficiary];
-
-        for (
-            uint256 activeIndex = 0;
-            activeIndex < actives.length;
-            activeIndex++
-        ) {
-            if (actives[activeIndex] == index) {
-                _removeActiveAt(beneficiary, activeIndex);
-                return;
+                vesting.completed = true;
             }
         }
 
-        revert("MultiVesting: active index not found");
+        return unreleased;
+    }
+
+    function _checkReleased(uint256 released) internal pure {
+        require(released > 0, "MultiVesting: no tokens are due");
     }
 
     /**
