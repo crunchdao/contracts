@@ -9,7 +9,7 @@ const CrunchMultiVestingV2 = artifacts.require("CrunchMultiVestingV2");
 const NULL = "0x0000000000000000000000000000000000000000";
 const ZERO = new BN("0");
 
-contract("Crunch Multi Vesting", async ([owner, user, ...accounts]) => {
+contract("Crunch Multi Vesting V2", async ([owner, user, ...accounts]) => {
   const fromUser = { from: user };
 
   let crunch;
@@ -51,13 +51,27 @@ contract("Crunch Multi Vesting", async ([owner, user, ...accounts]) => {
     );
   });
 
-  it("create(address, uint256, uint256, uint256) : beneficiary=0x0", async () => {
+  it("availableReserve()", async () => {
+    const amount = new BN("10000");
+    const half = amount.divn(2);
+
     await expect(
-      multiVesting.create(NULL, ZERO, ZERO, ZERO)
-    ).to.be.rejectedWith(
-      Error,
-      "MultiVesting: beneficiary is the zero address"
-    );
+      multiVesting.availableReserve()
+    ).to.eventually.be.a.bignumber.equal(ZERO);
+
+    await expect(crunch.transfer(multiVesting.address, amount)).to.be.fulfilled;
+
+    await expect(
+      multiVesting.availableReserve()
+    ).to.eventually.be.a.bignumber.equal(amount);
+
+    await expect(
+      multiVesting.create(owner, half, timeHelper.years(1), timeHelper.years(1))
+    ).to.be.fulfilled;
+
+    await expect(
+      multiVesting.availableReserve()
+    ).to.eventually.be.a.bignumber.equal(half);
   });
 
   it("begin()", async () => {
@@ -82,6 +96,15 @@ contract("Crunch Multi Vesting", async ([owner, user, ...accounts]) => {
     await expect(multiVesting.begin()).to.be.rejectedWith(
       Error,
       "MultiVesting: already started"
+    );
+  });
+
+  it("create(address, uint256, uint256, uint256) : beneficiary=0x0", async () => {
+    await expect(
+      multiVesting.create(NULL, ZERO, ZERO, ZERO)
+    ).to.be.rejectedWith(
+      Error,
+      "MultiVesting: beneficiary is the zero address"
     );
   });
 });

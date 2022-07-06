@@ -9,7 +9,7 @@ const CrunchToken = artifacts.require("CrunchToken");
 const CrunchTimelock = artifacts.require("CrunchTimelock");
 const CrunchTimelockFactory = artifacts.require("CrunchTimelockFactory");
 
-contract("Crunch Vesting Factory", async (accounts) => {
+contract("Crunch Timelock Factory", async (accounts) => {
   let crunch;
   let factory;
 

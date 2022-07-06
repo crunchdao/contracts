@@ -8,7 +8,7 @@ const CrunchMultiVesting = artifacts.require("CrunchMultiVesting");
 
 const ONE_DAY = new BN(timeHelper.days(1));
 
-contract("Crunch Multi Vesting", async ([owner, ...accounts]) => {
+contract("Crunch Multi Vesting [ Stress ]", async ([owner, ...accounts]) => {
   let crunch;
   let multiVesting;
 
