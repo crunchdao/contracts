@@ -28,4 +28,7 @@ jobs:
       run: npm install
     
     - name: Run Truffle Test with CI=true for Codechecks  
-      run: CI=true truffle test
+      run: |
+        npm run ganache 2>/dev/null >/dev/null &
+        sleep 4
+        CI=true truffle test
