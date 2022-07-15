@@ -31,7 +31,14 @@ contract CrunchMultiVestingV2 is Ownable {
         uint256 amount,
         uint256 cliffDuration,
         uint256 duration,
+        bool revocable,
         uint256 index
+    );
+
+    event VestingRevoked(
+        address indexed beneficiary,
+        uint256 index,
+        uint256 refund
     );
 
     struct Vesting {
@@ -43,6 +50,8 @@ contract CrunchMultiVestingV2 is Ownable {
         uint256 cliffDuration;
         /** the duration of the token vesting. */
         uint256 duration;
+        bool revocable;
+        bool revoked;
         /** the amount of the token released. */
         uint256 released;
         /** this vesting index. */
@@ -94,6 +103,22 @@ contract CrunchMultiVestingV2 is Ownable {
         return crunch.decimals();
     }
 
+    /**
+     * @notice Get the current reserve (or balance) of the contract in CRUNCH.
+     * @return The balance of CRUNCH this contract has.
+     */
+    function reserve() public view returns (uint256) {
+        return crunch.balanceOf(address(this));
+    }
+
+    /**
+     * @notice Get the available reserve.
+     * @return The number of CRUNCH that can be used to create another vesting.
+     */
+    function availableReserve() public view returns (uint256) {
+        return reserve() - totalSupply;
+    }
+
     function begin() external onlyOwner onlyWhenNotStarted {
         startDate = block.timestamp;
     }
@@ -119,7 +144,8 @@ contract CrunchMultiVestingV2 is Ownable {
         address beneficiary,
         uint256 amount,
         uint256 cliffDuration,
-        uint256 duration
+        uint256 duration,
+        bool revocable
     ) external onlyOwner onlyWhenNotStarted {
         require(
             beneficiary != address(0),
@@ -148,6 +174,8 @@ contract CrunchMultiVestingV2 is Ownable {
                 amount: amount,
                 cliffDuration: cliffDuration,
                 duration: duration,
+                revocable: revocable,
+                revoked: false,
                 released: 0,
                 index: index,
                 completed: false
@@ -161,24 +189,9 @@ contract CrunchMultiVestingV2 is Ownable {
             amount,
             cliffDuration,
             duration,
+            revocable,
             index
         );
-    }
-
-    /**
-     * @notice Get the current reserve (or balance) of the contract in CRUNCH.
-     * @return The balance of CRUNCH this contract has.
-     */
-    function reserve() public view returns (uint256) {
-        return crunch.balanceOf(address(this));
-    }
-
-    /**
-     * @notice Get the available reserve.
-     * @return The number of CRUNCH that can be used to create another vesting.
-     */
-    function availableReserve() public view returns (uint256) {
-        return reserve() - totalSupply;
     }
 
     /**
@@ -225,6 +238,23 @@ contract CrunchMultiVestingV2 is Ownable {
         returns (uint256)
     {
         return _releaseAll(beneficiary);
+    }
+
+    function revoke(address beneficiary, uint256 index) public onlyOwner {
+        Vesting storage vesting = _getVesting(beneficiary, index);
+
+        require(vesting.revocable, "MultiVesting: token not revocable");
+        require(!vesting.revoked, "MultiVesting: token already revoked");
+
+        uint256 unreleased = _releasableAmount(vesting);
+        uint256 refund = vesting.amount - unreleased;
+
+        vesting.revoked = true;
+
+        crunch.transfer(owner(), refund);
+        vesting.amount -= refund;
+
+        emit VestingRevoked(beneficiary, index, refund);
     }
 
     /**
@@ -431,7 +461,7 @@ contract CrunchMultiVestingV2 is Ownable {
             return 0;
         }
 
-        if ((block.timestamp >= startDate + vesting.duration)) {
+        if ((block.timestamp >= startDate + vesting.duration) || vesting.revoked) {
             return vesting.amount;
         }
 
