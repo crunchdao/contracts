@@ -9,6 +9,7 @@ const CrunchMultiVestingV2 = artifacts.require("CrunchMultiVestingV2");
 const NULL = "0x0000000000000000000000000000000000000000";
 const ZERO = new BN("0");
 const ONE = new BN("1");
+const TWO = new BN("2");
 const ONE_YEAR = new BN(timeHelper.years(1));
 const TWO_YEAR = new BN(timeHelper.years(2));
 
@@ -89,6 +90,30 @@ contract("Crunch Multi Vesting V2", async ([owner, user, ...accounts]) => {
     await expect(multiVesting.create(owner, ONE, ONE, ONE, true)).to.be.fulfilled;
 
     await expect(multiVesting.create(owner, ONE, ONE, ONE, true)).to.be.rejectedWith(Error, "MultiVesting: beneficiary is already vested");
+  });
+
+  it("transfer(address) : not vesting", async () => {
+    await expect(multiVesting.transfer(user)).to.be.rejectedWith(Error, "MultiVesting: not currently vesting");
+  });
+
+  it("transfer(address) : already vesting", async () => {
+    await expect(crunch.transfer(multiVesting.address, TWO)).to.be.fulfilled;
+
+    await expect(multiVesting.create(owner, ONE, ONE, ONE, true)).to.be.fulfilled;
+    await expect(multiVesting.create(user, ONE, ONE, ONE, true)).to.be.fulfilled;
+
+    await expect(multiVesting.transfer(user)).to.be.rejectedWith(Error, "MultiVesting: new beneficiary is already vested");
+  });
+
+  it("transfer(address)", async () => {
+    await expect(crunch.transfer(multiVesting.address, TWO)).to.be.fulfilled;
+
+    await expect(multiVesting.create(owner, ONE, ONE, ONE, true)).to.be.fulfilled;
+
+    await expect(multiVesting.transfer(user)).to.be.fulfilled;
+
+    await expect(multiVesting.isVested(owner)).to.be.eventually.false
+    await expect(multiVesting.isVested(user)).to.be.eventually.true
   });
 
   it("revoke(address, index) : not revocable", async () => {
