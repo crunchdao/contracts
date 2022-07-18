@@ -112,8 +112,8 @@ contract("Crunch Multi Vesting V2", async ([owner, user, ...accounts]) => {
 
     await expect(multiVesting.transfer(user)).to.be.fulfilled;
 
-    await expect(multiVesting.isVested(owner)).to.be.eventually.false
-    await expect(multiVesting.isVested(user)).to.be.eventually.true
+    await expect(multiVesting.isVested(owner)).to.be.eventually.false;
+    await expect(multiVesting.isVested(user)).to.be.eventually.true;
   });
 
   it("revoke(address, index) : not revocable", async () => {
@@ -165,5 +165,91 @@ contract("Crunch Multi Vesting V2", async ([owner, user, ...accounts]) => {
 
     // TODO Check amount
     await expect(crunch.balanceOf(user)).to.eventually.be.a.bignumber.not.equal(ZERO);
+  });
+  
+  it("clearFor(address) : not the owner", async () => {
+    await expect(multiVesting.clearFor(user, fromUser)).to.be.rejectedWith(Error, "Ownable: caller is not the owner");
+  });
+
+  it("clearFor() : no vesting", async () => {
+    await expect(multiVesting.clear()).to.be.rejectedWith(Error, "MultiVesting: address is not vested");
+  });
+
+  it("clearFor() : not revoked", async () => {
+    await expect(crunch.transfer(multiVesting.address, ONE)).to.be.fulfilled;
+
+    await expect(multiVesting.create(user, ONE, ONE, ONE, true)).to.be.fulfilled;
+
+    await expect(multiVesting.clearFor(user)).to.be.rejectedWith(Error, "MultiVesting: vesting not revoked");
+  });
+
+  it("clearFor() : still have token", async () => {
+    await expect(crunch.transfer(multiVesting.address, ONE)).to.be.fulfilled;
+
+    await expect(multiVesting.create(user, ONE, ONE, ONE, true)).to.be.fulfilled;
+
+    await expect(multiVesting.begin()).to.be.fulfilled;
+    await advance.timeAndBlock(TWO);
+
+    await expect(multiVesting.revoke(user)).to.be.fulfilled;
+
+    await expect(multiVesting.clearFor(user)).to.be.rejectedWith(Error, "MultiVesting: still have tokens");
+  });
+
+  it("clearFor()", async () => {
+    await expect(crunch.transfer(multiVesting.address, ONE)).to.be.fulfilled;
+
+    await expect(multiVesting.create(user, ONE, ONE, ONE, true)).to.be.fulfilled;
+
+    await expect(multiVesting.begin()).to.be.fulfilled;
+    await advance.timeAndBlock(TWO);
+
+    await expect(multiVesting.revoke(user)).to.be.fulfilled;
+    await expect(multiVesting.release(fromUser)).to.be.fulfilled;
+
+    await expect(multiVesting.clearFor(user)).to.be.fulfilled;
+
+    await expect(multiVesting.isVested(user)).to.be.eventually.false;
+  });
+
+  it("clear() : no vesting", async () => {
+    await expect(multiVesting.clear()).to.be.rejectedWith(Error, "MultiVesting: address is not vested");
+  });
+
+  it("clear() : not revoked", async () => {
+    await expect(crunch.transfer(multiVesting.address, ONE)).to.be.fulfilled;
+
+    await expect(multiVesting.create(owner, ONE, ONE, ONE, true)).to.be.fulfilled;
+
+    await expect(multiVesting.clear()).to.be.rejectedWith(Error, "MultiVesting: vesting not revoked");
+  });
+
+  it("clear() : still have token", async () => {
+    await expect(crunch.transfer(multiVesting.address, ONE)).to.be.fulfilled;
+
+    await expect(multiVesting.create(owner, ONE, ONE, ONE, true)).to.be.fulfilled;
+
+    await expect(multiVesting.begin()).to.be.fulfilled;
+    await advance.timeAndBlock(TWO);
+
+    await expect(multiVesting.revoke(owner)).to.be.fulfilled;
+
+    await expect(multiVesting.clear()).to.be.rejectedWith(Error, "MultiVesting: still have tokens");
+  });
+
+  it("clear()", async () => {
+    await expect(crunch.transfer(multiVesting.address, ONE)).to.be.fulfilled;
+
+    await expect(multiVesting.create(owner, ONE, ONE, ONE, true)).to.be.fulfilled;
+
+    await expect(multiVesting.begin()).to.be.fulfilled;
+    await advance.timeAndBlock(TWO);
+
+    await expect(multiVesting.revoke(owner)).to.be.fulfilled;
+    await expect(multiVesting.release()).to.be.fulfilled;
+
+    await expect(multiVesting.clear()).to.be.fulfilled;
+
+    await expect(multiVesting.isVested(owner)).to.be.eventually.false;
   });
 });
