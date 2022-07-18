@@ -10,39 +10,34 @@ import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
  * @notice Allow the vesting of multiple users using only one contract.
  */
 contract CrunchMultiVestingV2 is Ownable {
+    // prettier-ignore
     event TokensReleased(
         address indexed beneficiary,
-        uint256 index,
         uint256 amount
     );
 
+    // prettier-ignore
     event CrunchTokenUpdated(
-        address indexed previousCrunchToken,
-        address indexed newCrunchToken
-    );
-
-    event CreatorChanged(
-        address indexed previousAddress,
+        address indexed oldAddress,
         address indexed newAddress
     );
 
+    // prettier-ignore
     event VestingCreated(
         address indexed beneficiary,
         uint256 amount,
         uint256 cliffDuration,
         uint256 duration,
-        bool revocable,
-        uint256 index
+        bool revocable
     );
 
+    // prettier-ignore
     event VestingRevoked(
         address indexed beneficiary,
-        uint256 index,
         uint256 refund
     );
 
     struct Vesting {
-        /* beneficiary of tokens after they are released. */
         address beneficiary;
         /** the amount of token to vest. */
         uint256 amount;
@@ -54,10 +49,6 @@ contract CrunchMultiVestingV2 is Ownable {
         bool revoked;
         /** the amount of the token released. */
         uint256 released;
-        /** this vesting index. */
-        uint256 index;
-        /** if everything as been released. */
-        bool completed;
     }
 
     /* CRUNCH erc20 address. */
@@ -69,14 +60,14 @@ contract CrunchMultiVestingV2 is Ownable {
     uint256 public startDate;
 
     /** mapping to vesting list */
-    mapping(address => Vesting[]) public vestings;
+    mapping(address => Vesting) public vestings;
 
     /**
      * @notice Instanciate a new contract.
-     * @param _crunch CRUNCH token address.
+     * @param crunch_ CRUNCH token address.
      */
-    constructor(address _crunch) {
-        _setCrunch(_crunch);
+    constructor(address crunch_) {
+        _setCrunch(crunch_);
     }
 
     /**
@@ -147,101 +138,51 @@ contract CrunchMultiVestingV2 is Ownable {
         uint256 duration,
         bool revocable
     ) external onlyOwner onlyWhenNotStarted {
-        require(
-            beneficiary != address(0),
-            "MultiVesting: beneficiary is the zero address"
-        );
-
+        require(beneficiary != address(0), "MultiVesting: beneficiary is the zero address");
+        require(!isVested(beneficiary), "MultiVesting: beneficiary is already vested");
         require(amount > 0, "MultiVesting: amount is 0");
-
         require(duration > 0, "MultiVesting: duration is 0");
+        require(cliffDuration <= duration, "MultiVesting: cliff is longer than duration");
+        require(availableReserve() >= amount, "MultiVesting: available reserve is not enough");
 
-        require(
-            cliffDuration <= duration,
-            "MultiVesting: cliff is longer than duration"
-        );
-
-        require(
-            availableReserve() >= amount,
-            "MultiVesting: available reserve is not enough"
-        );
-
-        uint256 index = vestings[beneficiary].length;
-
-        vestings[beneficiary].push(
-            Vesting({
-                beneficiary: beneficiary,
-                amount: amount,
-                cliffDuration: cliffDuration,
-                duration: duration,
-                revocable: revocable,
-                revoked: false,
-                released: 0,
-                index: index,
-                completed: false
-            })
-        );
+        // prettier-ignore
+        vestings[beneficiary] = Vesting({
+            beneficiary: beneficiary,
+            amount: amount,
+            cliffDuration: cliffDuration,
+            duration: duration,
+            revocable: revocable,
+            revoked: false,
+            released: 0
+        });
 
         totalSupply += amount;
 
-        emit VestingCreated(
-            beneficiary,
-            amount,
-            cliffDuration,
-            duration,
-            revocable,
-            index
-        );
+        emit VestingCreated(beneficiary, amount, cliffDuration, duration, revocable);
     }
 
     /**
-     * @notice Release a vesting of the current caller by its `index`.
+     * @notice Release a vesting of the current caller.
      * @dev A `TokensReleased` event will be emitted.
      * @dev The transaction will fail if no token are due.
-     * @param index The vesting index to release.
      */
-    function release(uint256 index) external returns (uint256) {
-        return _release(_msgSender(), index);
+    function release() external returns (uint256) {
+        return _release(_msgSender());
     }
 
     /**
-     * @notice Release a vesting of a specified address by its `index`.
+     * @notice Release a vesting of a specified address.
      * @dev The caller must be the owner.
+     * @dev A `TokensReleased` event will be emitted.
+     * @dev The transaction will fail if no token are due.
      * @param beneficiary Address to release.
-     * @param index The vesting index to release.
      */
-    function releaseFor(address beneficiary, uint256 index)
-        external
-        onlyOwner
-        returns (uint256)
-    {
-        return _release(beneficiary, index);
+    function releaseFor(address beneficiary) external onlyOwner returns (uint256) {
+        return _release(beneficiary);
     }
 
-    /**
-     * @notice Release all of active vesting of the current caller.
-     * @dev Multiple `TokensReleased` event might be emitted.
-     * @dev The transaction will fail if no token are due.
-     */
-    function releaseAll() external returns (uint256) {
-        return _releaseAll(_msgSender());
-    }
-
-    /**
-     * @notice Release all of active vesting of a specified address.
-     * @dev Multiple `TokensReleased` event might be emitted.
-     * @dev The transaction will fail if no token are due.
-     */
-    function releaseAllFor(address beneficiary)
-        external
-        onlyOwner
-        returns (uint256)
-    {
-        return _releaseAll(beneficiary);
-    }
-
-    function revoke(address beneficiary, uint256 index) public onlyOwner {
-        Vesting storage vesting = _getVesting(beneficiary, index);
+    function revoke(address beneficiary) public onlyOwner {
+        Vesting storage vesting = _getVesting(beneficiary);
 
         require(vesting.revocable, "MultiVesting: token not revocable");
         require(!vesting.revoked, "MultiVesting: token already revoked");
@@ -254,97 +195,45 @@ contract CrunchMultiVestingV2 is Ownable {
         crunch.transfer(owner(), refund);
         vesting.amount -= refund;
 
-        emit VestingRevoked(beneficiary, index, refund);
+        emit VestingRevoked(beneficiary, refund);
     }
 
     /**
-     * @notice Get the total of releasable amount of tokens by doing the sum of all of the currently active vestings.
+     * @notice Get the releasable amount of tokens.
      * @param beneficiary Address to check.
-     * @return total The sum of releasable amounts.
+     * @return The releasable amounts.
      */
-    function releasableAmount(address beneficiary)
-        public
-        view
-        returns (uint256 total)
-    {
-        uint256 size = vestingsCount(beneficiary);
-
-        for (uint256 index = 0; index < size; ++index) {
-            Vesting storage vesting = _getVesting(beneficiary, index);
-
-            total += _releasableAmount(vesting);
-        }
-    }
-
-    /**
-     * @notice Get the releasable amount of tokens of a vesting by its `index`.
-     * @param beneficiary Address to check.
-     * @param index Vesting index to check.
-     * @return The releasable amount of tokens of the found vesting.
-     */
-    function releasableAmountAt(address beneficiary, uint256 index)
-        external
-        view
-        returns (uint256)
-    {
-        Vesting storage vesting = _getVesting(beneficiary, index);
+    function releasableAmount(address beneficiary) public view returns (uint256) {
+        Vesting storage vesting = _getVesting(beneficiary);
 
         return _releasableAmount(vesting);
     }
 
     /**
-     * @notice Get the sum of all vested amount of tokens.
+     * @notice Get the vested amount of tokens.
      * @param beneficiary Address to check.
-     * @return total The sum of vested amount of all of the vestings.
+     * @return The vested amount of the vestings.
      */
-    function vestedAmount(address beneficiary)
-        public
-        view
-        returns (uint256 total)
-    {
-        uint256 size = vestingsCount(beneficiary);
-
-        for (uint256 index = 0; index < size; ++index) {
-            Vesting storage vesting = _getVesting(beneficiary, index);
-
-            total += _vestedAmount(vesting);
-        }
-    }
-
-    /**
-     * @notice Get the vested amount of tokens of a vesting by its `index`.
-     * @param beneficiary Address to check.
-     * @param index Address to check.
-     * @return The vested amount of the found vesting.
-     */
-    function vestedAmountAt(address beneficiary, uint256 index)
-        external
-        view
-        returns (uint256)
-    {
-        Vesting storage vesting = _getVesting(beneficiary, index);
+    function vestedAmount(address beneficiary) public view returns (uint256) {
+        Vesting storage vesting = _getVesting(beneficiary);
 
         return _vestedAmount(vesting);
     }
 
     /**
-     * @notice Get the sum of all remaining amount of tokens of each vesting of a beneficiary.
+     * @notice Get the remaining amount of token of a beneficiary.
      * @dev This function is to make wallets able to display the amount in their UI.
      * @param beneficiary Address to check.
-     * @return total The sum of all remaining amount of tokens.
+     * @return The remaining amount of tokens.
      */
-    function balanceOf(address beneficiary)
-        external
-        view
-        returns (uint256 total)
-    {
-        uint256 size = vestingsCount(beneficiary);
+    function balanceOf(address beneficiary) external view returns (uint256) {
+        Vesting storage vesting = _getVesting(beneficiary);
 
-        for (uint256 index = 0; index < size; ++index) {
-            Vesting storage vesting = _getVesting(beneficiary, index);
+        return vesting.amount - vesting.released;
+    }
 
-            total += vesting.amount - vesting.released;
-        }
+    function isVested(address beneficiary) public view returns (bool) {
+        return vestings[beneficiary].duration != 0;
     }
 
     /**
@@ -358,72 +247,29 @@ contract CrunchMultiVestingV2 is Ownable {
     }
 
     /**
-     * @notice Get the number of vesting of an address.
-     * @param beneficiary Address to check.
-     * @return Number of vesting.
-     */
-    function vestingsCount(address beneficiary) public view returns (uint256) {
-        return vestings[beneficiary].length;
-    }
-
-    /**
      * @dev Internal implementation of the release() method.
      * @dev The methods will fail if there is no tokens due.
      * @dev A `TokensReleased` event will be emitted.
      * @dev If the vesting's released tokens is the same of the vesting's amount, the vesting is considered as finished, and will be removed from the active list.
      * @param beneficiary Address to release.
-     * @param index Vesting index to release.
      */
-    function _release(address beneficiary, uint256 index)
-        internal
-        returns (uint256 released)
-    {
-        released = _doRelease(beneficiary, index);
+    function _release(address beneficiary) internal returns (uint256 released) {
+        released = _doRelease(beneficiary);
         _checkReleased(released);
     }
 
-    /**
-     * @dev Internal implementation of the releaseAll() method.
-     * @dev The methods will fail if there is no tokens due for all of the vestings.
-     * @dev Multiple `TokensReleased` event may be emitted.
-     * @dev If some vesting's released tokens is the same of their amount, they will considered as finished, and will be marked as completed.
-     * @param beneficiary Address to release.
-     */
-    function _releaseAll(address beneficiary)
-        internal
-        returns (uint256 released)
-    {
-        uint256 size = vestingsCount(beneficiary);
+    function _doRelease(address beneficiary) internal returns (uint256 unreleased) {
+        Vesting storage vesting = _getVesting(beneficiary);
 
-        for (uint256 index = 0; index < size; ++index) {
-            released += _doRelease(beneficiary, index);
-        }
-
-        _checkReleased(released);
-    }
-
-    function _doRelease(address beneficiary, uint256 index) internal returns (uint256) {
-        Vesting storage vesting = _getVesting(beneficiary, index);
-
-        if (vesting.completed) {
-            return 0;
-        }
-
-        uint256 unreleased = _releasableAmount(vesting);
+        unreleased = _releasableAmount(vesting);
         if (unreleased != 0) {
             crunch.transfer(vesting.beneficiary, unreleased);
 
             vesting.released += unreleased;
             totalSupply -= unreleased;
 
-            emit TokensReleased(vesting.beneficiary, vesting.index, unreleased);
-
-            if (vesting.released == vesting.amount) {
-                vesting.completed = true;
-            }
+            emit TokensReleased(vesting.beneficiary, unreleased);
         }
-
-        return unreleased;
     }
 
     function _checkReleased(uint256 released) internal pure {
@@ -434,11 +280,7 @@ contract CrunchMultiVestingV2 is Ownable {
      * @dev Compute the releasable amount.
      * @param vesting Vesting instance.
      */
-    function _releasableAmount(Vesting memory vesting)
-        internal
-        view
-        returns (uint256)
-    {
+    function _releasableAmount(Vesting memory vesting) internal view returns (uint256) {
         return _vestedAmount(vesting) - vesting.released;
     }
 
@@ -446,11 +288,7 @@ contract CrunchMultiVestingV2 is Ownable {
      * @dev Compute the vested amount.
      * @param vesting Vesting instance.
      */
-    function _vestedAmount(Vesting memory vesting)
-        internal
-        view
-        returns (uint256)
-    {
+    function _vestedAmount(Vesting memory vesting) internal view returns (uint256) {
         if (startDate == 0) {
             return 0;
         }
@@ -465,23 +303,18 @@ contract CrunchMultiVestingV2 is Ownable {
             return vesting.amount;
         }
 
-        // TODO: Rename for something better?
-        uint256 since = block.timestamp - startDate;
-        return (vesting.amount * since) / vesting.duration;
+        return (vesting.amount * (block.timestamp - startDate)) / vesting.duration;
     }
 
     /**
      * @dev Get a vesting.
      * @param beneficiary Address to get it from.
-     * @param index Index to get it from.
-     * @return A vesting struct stored in the storage.
+     * @return vesting struct stored in the storage.
      */
-    function _getVesting(address beneficiary, uint256 index)
-        internal
-        view
-        returns (Vesting storage)
-    {
-        return vestings[beneficiary][index];
+    function _getVesting(address beneficiary) internal view returns (Vesting storage) {
+        require(isVested(beneficiary), "MultiVesting: address is not vested");
+
+        return vestings[beneficiary];
     }
 
     /**
@@ -490,6 +323,8 @@ contract CrunchMultiVestingV2 is Ownable {
      * @param newCrunch New CRUNCH token address.
      */
     function _setCrunch(address newCrunch) internal {
+        require(address(crunch) != newCrunch, "MultiVesting: crunch is the same as before");
+
         address previousCrunch = address(crunch);
 
         crunch = IERC20Metadata(newCrunch);
