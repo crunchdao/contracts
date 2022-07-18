@@ -179,6 +179,8 @@ contract CrunchMultiVestingV2 is Ownable {
         require(!isVested(to), "MultiVesting: new beneficiary is already vested");
 
         vestings[to] = vestings[from];
+        vestings[to].beneficiary = to;
+        
         delete vestings[from];
 
         emit VestingTransfered(from, to);
