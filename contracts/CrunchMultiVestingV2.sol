@@ -37,6 +37,12 @@ contract CrunchMultiVestingV2 is Ownable {
         uint256 refund
     );
 
+    // prettier-ignore
+    event VestingTransfered(
+        address indexed from,
+        address indexed to
+    );
+
     struct Vesting {
         address beneficiary;
         /** the amount of token to vest. */
@@ -159,6 +165,18 @@ contract CrunchMultiVestingV2 is Ownable {
         totalSupply += amount;
 
         emit VestingCreated(beneficiary, amount, cliffDuration, duration, revocable);
+    }
+
+    function transfer(address to) external {
+        address from = _msgSender();
+
+        require(isVested(from), "MultiVesting: not currently vesting");
+        require(!isVested(to), "MultiVesting: new beneficiary is already vested");
+
+        vestings[to] = vestings[from];
+        delete vestings[from];
+
+        emit VestingTransfered(from, to);
     }
 
     /**
