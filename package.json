@@ -4,13 +4,15 @@
   "description": "DataCrunch Token Contracts",
   "scripts": {
     "ganache": "ganache",
-    "test": "truffle test --stacktrace",
+    "truffle": "truffle",
+    "test": "truffle test --stacktrace --network development",
     "develop": "truffle develop"
   },
   "directories": {
     "test": "test"
   },
   "dependencies": {
+    "@bdaenen/uwebsockets": "^19.5.0",
     "@openzeppelin/contracts": "=4.7.0",
     "@truffle/hdwallet-provider": "^2.0.10",
     "chai": "^4.3.6",
@@ -33,5 +35,8 @@
   "bugs": {
     "url": "https://github.com/datacrunch-com/datacrunch/issues"
   },
-  "homepage": "https://github.com/datacrunch-com/datacrunch#readme"
+  "homepage": "https://github.com/datacrunch-com/datacrunch#readme",
+  "prettier": {
+    "printWidth": 800
+  }
 }
