@@ -75,243 +75,255 @@ contract("Crunch Multi Vesting V2", async ([owner, user, ...accounts]) => {
     await expect(multiVesting.availableReserve()).to.eventually.be.a.bignumber.equal(half);
   });
 
-  it("begin()", async () => {
-    const transaction = await expect(multiVesting.begin()).to.be.fulfilled;
-    const { blockNumber } = transaction.receipt;
-    const { timestamp } = await blockHelper.get(blockNumber);
+  describe("begin()", () => {
+    it("ok", async () => {
+      const transaction = await expect(multiVesting.begin()).to.be.fulfilled;
+      const { blockNumber } = transaction.receipt;
+      const { timestamp } = await blockHelper.get(blockNumber);
 
-    await expect(multiVesting.startDate()).to.eventually.a.bignumber.equal(new BN(timestamp));
-  });
+      await expect(multiVesting.startDate()).to.eventually.a.bignumber.equal(new BN(timestamp));
+    });
 
-  it("begin() : only owner", async () => {
-    await expect(multiVesting.begin(fromUser)).to.be.rejectedWith(Error, "Ownable: caller is not the owner");
-  });
+    it("only owner", async () => {
+      await expect(multiVesting.begin(fromUser)).to.be.rejectedWith(Error, "Ownable: caller is not the owner");
+    });
 
-  it("begin() : cannot be called twice", async () => {
-    await expect(multiVesting.begin()).to.be.fulfilled;
-    await expect(multiVesting.begin()).to.be.rejectedWith(Error, "MultiVesting: already started");
-  });
-
-  it("create(address, uint256, uint256, uint256) : beneficiary=0x0", async () => {
-    await expect(multiVesting.create(NULL, ZERO, ZERO, ZERO, true)).to.be.rejectedWith(Error, "MultiVesting: beneficiary is the zero address");
-  });
-
-  it("create(address, uint256, uint256, uint256) : already vesting", async () => {
-    await expect(crunch.transfer(multiVesting.address, ONE)).to.be.fulfilled;
-    await expect(multiVesting.create(owner, ONE, ONE, ONE, true)).to.be.fulfilled;
-
-    await expect(multiVesting.create(owner, ONE, ONE, ONE, true)).to.be.rejectedWith(Error, "MultiVesting: beneficiary is already vested");
-  });
-
-  it("create(address, uint256, uint256, uint256) : amount=0", async () => {
-    await expect(multiVesting.create(owner, ZERO, ONE, ONE, true)).to.be.rejectedWith(Error, "MultiVesting: amount is 0");
-  });
-
-  it("create(address, uint256, uint256, uint256) : duration=0", async () => {
-    await expect(multiVesting.create(owner, ONE, ONE, ZERO, true)).to.be.rejectedWith(Error, "MultiVesting: duration is 0");
-  });
-
-  it("create(address, uint256, uint256, uint256) : cliff longer than duration", async () => {
-    await expect(multiVesting.create(owner, ONE, TWO, ONE, true)).to.be.rejectedWith(Error, "MultiVesting: cliff is longer than duration");
-  });
-
-  it("create(address, uint256, uint256, uint256) : no reserve", async () => {
-    await expect(multiVesting.create(owner, TWO, ONE, ONE, true)).to.be.rejectedWith(Error, "MultiVesting: available reserve is not enough");
-
-    await expect(crunch.transfer(multiVesting.address, ONE)).to.be.fulfilled;
-
-    await expect(multiVesting.create(owner, TWO, ONE, ONE, true)).to.be.rejectedWith(Error, "MultiVesting: available reserve is not enough");
-
-    await expect(multiVesting.create(owner, ONE, ONE, ONE, true)).to.be.fulfilled;
-  });
-
-  it("create(address, uint256, uint256, uint256)", async () => {
-    await expect(crunch.transfer(multiVesting.address, ONE)).to.be.fulfilled;
-    await expect(multiVesting.create(user, ONE, TWO, THREE, true)).to.be.fulfilled;
-
-    await expect(multiVesting.isVested(user)).to.be.eventually.true;
-
-    const vesting = await multiVesting.vestings(user);
-    expectVesting(vesting, {
-      beneficiary: user,
-      amount: ONE,
-      cliffDuration: TWO,
-      duration: THREE,
-      revocable: true,
-      revoked: false,
-      released: ZERO,
+    it("cannot be called twice", async () => {
+      await expect(multiVesting.begin()).to.be.fulfilled;
+      await expect(multiVesting.begin()).to.be.rejectedWith(Error, "MultiVesting: already started");
     });
   });
 
-  it("transfer(address) : not vesting", async () => {
-    await expect(multiVesting.transfer(user)).to.be.rejectedWith(Error, "MultiVesting: not currently vesting");
-  });
+  describe("create(address, uint256, uint256, uint256)", () => {
+    it("beneficiary=0x0", async () => {
+      await expect(multiVesting.create(NULL, ZERO, ZERO, ZERO, true)).to.be.rejectedWith(Error, "MultiVesting: beneficiary is the zero address");
+    });
 
-  it("transfer(address) : already vesting", async () => {
-    await expect(crunch.transfer(multiVesting.address, TWO)).to.be.fulfilled;
+    it("already vesting", async () => {
+      await expect(crunch.transfer(multiVesting.address, ONE)).to.be.fulfilled;
+      await expect(multiVesting.create(owner, ONE, ONE, ONE, true)).to.be.fulfilled;
 
-    await expect(multiVesting.create(owner, ONE, ONE, ONE, true)).to.be.fulfilled;
-    await expect(multiVesting.create(user, ONE, ONE, ONE, true)).to.be.fulfilled;
+      await expect(multiVesting.create(owner, ONE, ONE, ONE, true)).to.be.rejectedWith(Error, "MultiVesting: beneficiary is already vested");
+    });
 
-    await expect(multiVesting.transfer(user)).to.be.rejectedWith(Error, "MultiVesting: new beneficiary is already vested");
-  });
+    it("amount=0", async () => {
+      await expect(multiVesting.create(owner, ZERO, ONE, ONE, true)).to.be.rejectedWith(Error, "MultiVesting: amount is 0");
+    });
 
-  it("transfer(address)", async () => {
-    await expect(crunch.transfer(multiVesting.address, TWO)).to.be.fulfilled;
+    it("duration=0", async () => {
+      await expect(multiVesting.create(owner, ONE, ONE, ZERO, true)).to.be.rejectedWith(Error, "MultiVesting: duration is 0");
+    });
 
-    await expect(multiVesting.create(owner, ONE, ONE, ONE, true)).to.be.fulfilled;
+    it("cliff longer than duration", async () => {
+      await expect(multiVesting.create(owner, ONE, TWO, ONE, true)).to.be.rejectedWith(Error, "MultiVesting: cliff is longer than duration");
+    });
 
-    await expect(multiVesting.transfer(user)).to.be.fulfilled;
+    it("no reserve", async () => {
+      await expect(multiVesting.create(owner, TWO, ONE, ONE, true)).to.be.rejectedWith(Error, "MultiVesting: available reserve is not enough");
 
-    await expect(multiVesting.isVested(owner)).to.be.eventually.false;
-    await expect(multiVesting.isVested(user)).to.be.eventually.true;
+      await expect(crunch.transfer(multiVesting.address, ONE)).to.be.fulfilled;
 
-    const vesting = await multiVesting.vestings(user);
-    expectVesting(vesting, {
-      beneficiary: user,
-      amount: ONE,
-      cliffDuration: ONE,
-      duration: ONE,
-      revocable: true,
-      revoked: false,
-      released: ZERO,
+      await expect(multiVesting.create(owner, TWO, ONE, ONE, true)).to.be.rejectedWith(Error, "MultiVesting: available reserve is not enough");
+
+      await expect(multiVesting.create(owner, ONE, ONE, ONE, true)).to.be.fulfilled;
+    });
+
+    it("ok", async () => {
+      await expect(crunch.transfer(multiVesting.address, ONE)).to.be.fulfilled;
+      await expect(multiVesting.create(user, ONE, TWO, THREE, true)).to.be.fulfilled;
+
+      await expect(multiVesting.isVested(user)).to.be.eventually.true;
+
+      const vesting = await multiVesting.vestings(user);
+      expectVesting(vesting, {
+        beneficiary: user,
+        amount: ONE,
+        cliffDuration: TWO,
+        duration: THREE,
+        revocable: true,
+        revoked: false,
+        released: ZERO,
+      });
     });
   });
 
-  it("revoke(address, index) : not revocable", async () => {
-    await expect(crunch.transfer(multiVesting.address, ONE)).to.be.fulfilled;
+  describe("transfer(address)", () => {
+    it("not vesting", async () => {
+      await expect(multiVesting.transfer(user)).to.be.rejectedWith(Error, "MultiVesting: not currently vesting");
+    });
 
-    await expect(multiVesting.create(user, ONE, ONE, ONE, false)).to.be.fulfilled;
+    it("already vesting", async () => {
+      await expect(crunch.transfer(multiVesting.address, TWO)).to.be.fulfilled;
 
-    await expect(multiVesting.revoke(user)).to.be.rejectedWith(Error, "MultiVesting: token not revocable");
+      await expect(multiVesting.create(owner, ONE, ONE, ONE, true)).to.be.fulfilled;
+      await expect(multiVesting.create(user, ONE, ONE, ONE, true)).to.be.fulfilled;
+
+      await expect(multiVesting.transfer(user)).to.be.rejectedWith(Error, "MultiVesting: new beneficiary is already vested");
+    });
+
+    it("ok", async () => {
+      await expect(crunch.transfer(multiVesting.address, TWO)).to.be.fulfilled;
+
+      await expect(multiVesting.create(owner, ONE, ONE, ONE, true)).to.be.fulfilled;
+
+      await expect(multiVesting.transfer(user)).to.be.fulfilled;
+
+      await expect(multiVesting.isVested(owner)).to.be.eventually.false;
+      await expect(multiVesting.isVested(user)).to.be.eventually.true;
+
+      const vesting = await multiVesting.vestings(user);
+      expectVesting(vesting, {
+        beneficiary: user,
+        amount: ONE,
+        cliffDuration: ONE,
+        duration: ONE,
+        revocable: true,
+        revoked: false,
+        released: ZERO,
+      });
+    });
   });
 
-  it("revoke(address, index) : already revoked", async () => {
-    await expect(crunch.transfer(multiVesting.address, ONE)).to.be.fulfilled;
+  describe("revoke(address, index) : ", () => {
+    it("not revocable", async () => {
+      await expect(crunch.transfer(multiVesting.address, ONE)).to.be.fulfilled;
 
-    await expect(multiVesting.create(user, ONE, ONE, ONE, true)).to.be.fulfilled;
+      await expect(multiVesting.create(user, ONE, ONE, ONE, false)).to.be.fulfilled;
 
-    await expect(multiVesting.revoke(user)).to.be.fulfilled;
+      await expect(multiVesting.revoke(user)).to.be.rejectedWith(Error, "MultiVesting: token not revocable");
+    });
 
-    await expect(multiVesting.revoke(user)).to.be.rejectedWith(Error, "MultiVesting: token already revoked");
+    it("already revoked", async () => {
+      await expect(crunch.transfer(multiVesting.address, ONE)).to.be.fulfilled;
+
+      await expect(multiVesting.create(user, ONE, ONE, ONE, true)).to.be.fulfilled;
+
+      await expect(multiVesting.revoke(user)).to.be.fulfilled;
+
+      await expect(multiVesting.revoke(user)).to.be.rejectedWith(Error, "MultiVesting: token already revoked");
+    });
+
+    it("before cliff", async () => {
+      await expect(crunch.transfer(multiVesting.address, ONE)).to.be.fulfilled;
+
+      await expect(multiVesting.create(user, ONE, ONE_YEAR, TWO_YEAR, true)).to.be.fulfilled;
+
+      await expect(multiVesting.begin()).to.be.fulfilled;
+
+      await expect(multiVesting.revoke(user)).to.be.fulfilled;
+
+      await advance.timeAndBlock(TWO_YEAR);
+
+      await expect(multiVesting.release(fromUser)).to.be.rejectedWith(Error, "MultiVesting: no tokens are due");
+    });
+
+    it("ok", async () => {
+      await expect(crunch.transfer(multiVesting.address, ONE_CRUNCH)).to.be.fulfilled;
+
+      await expect(multiVesting.create(user, ONE_CRUNCH, ONE_YEAR, TWO_YEAR, true)).to.be.fulfilled;
+
+      await expect(multiVesting.begin()).to.be.fulfilled;
+
+      await advance.timeAndBlock(ONE_YEAR.add(ONE_YEAR.divn(2)));
+
+      await expect(multiVesting.revoke(user)).to.be.fulfilled;
+
+      await advance.timeAndBlock(ONE_YEAR);
+
+      await expect(multiVesting.release(fromUser)).to.be.fulfilled;
+
+      // TODO Check amount
+      await expect(crunch.balanceOf(user)).to.eventually.be.a.bignumber.not.equal(ZERO);
+    });
   });
 
-  it("revoke(address, index) : before cliff", async () => {
-    await expect(crunch.transfer(multiVesting.address, ONE)).to.be.fulfilled;
+  describe("clearFor()", () => {
+    it("not the owner", async () => {
+      await expect(multiVesting.clearFor(user, fromUser)).to.be.rejectedWith(Error, "Ownable: caller is not the owner");
+    });
 
-    await expect(multiVesting.create(user, ONE, ONE_YEAR, TWO_YEAR, true)).to.be.fulfilled;
+    it("no vesting", async () => {
+      await expect(multiVesting.clear()).to.be.rejectedWith(Error, "MultiVesting: address is not vested");
+    });
 
-    await expect(multiVesting.begin()).to.be.fulfilled;
+    it("not revoked", async () => {
+      await expect(crunch.transfer(multiVesting.address, ONE)).to.be.fulfilled;
 
-    await expect(multiVesting.revoke(user)).to.be.fulfilled;
+      await expect(multiVesting.create(user, ONE, ONE, ONE, true)).to.be.fulfilled;
 
-    await advance.timeAndBlock(TWO_YEAR);
+      await expect(multiVesting.clearFor(user)).to.be.rejectedWith(Error, "MultiVesting: vesting not revoked");
+    });
 
-    await expect(multiVesting.release(fromUser)).to.be.rejectedWith(Error, "MultiVesting: no tokens are due");
+    it("still have token", async () => {
+      await expect(crunch.transfer(multiVesting.address, ONE)).to.be.fulfilled;
+
+      await expect(multiVesting.create(user, ONE, ONE, ONE, true)).to.be.fulfilled;
+
+      await expect(multiVesting.begin()).to.be.fulfilled;
+      await advance.timeAndBlock(TWO);
+
+      await expect(multiVesting.revoke(user)).to.be.fulfilled;
+
+      await expect(multiVesting.clearFor(user)).to.be.rejectedWith(Error, "MultiVesting: still have tokens");
+    });
+
+    it("ok", async () => {
+      await expect(crunch.transfer(multiVesting.address, ONE)).to.be.fulfilled;
+
+      await expect(multiVesting.create(user, ONE, ONE, ONE, true)).to.be.fulfilled;
+
+      await expect(multiVesting.begin()).to.be.fulfilled;
+      await advance.timeAndBlock(TWO);
+
+      await expect(multiVesting.revoke(user)).to.be.fulfilled;
+      await expect(multiVesting.release(fromUser)).to.be.fulfilled;
+
+      await expect(multiVesting.clearFor(user)).to.be.fulfilled;
+
+      await expect(multiVesting.isVested(user)).to.be.eventually.false;
+    });
   });
 
-  it("revoke(address, index)", async () => {
-    await expect(crunch.transfer(multiVesting.address, ONE_CRUNCH)).to.be.fulfilled;
+  describe("clear()", () => {
+    it("no vesting", async () => {
+      await expect(multiVesting.clear()).to.be.rejectedWith(Error, "MultiVesting: address is not vested");
+    });
 
-    await expect(multiVesting.create(user, ONE_CRUNCH, ONE_YEAR, TWO_YEAR, true)).to.be.fulfilled;
+    it("not revoked", async () => {
+      await expect(crunch.transfer(multiVesting.address, ONE)).to.be.fulfilled;
 
-    await expect(multiVesting.begin()).to.be.fulfilled;
+      await expect(multiVesting.create(owner, ONE, ONE, ONE, true)).to.be.fulfilled;
 
-    await advance.timeAndBlock(ONE_YEAR.add(ONE_YEAR.divn(2)));
+      await expect(multiVesting.clear()).to.be.rejectedWith(Error, "MultiVesting: vesting not revoked");
+    });
 
-    await expect(multiVesting.revoke(user)).to.be.fulfilled;
+    it("still have token", async () => {
+      await expect(crunch.transfer(multiVesting.address, ONE)).to.be.fulfilled;
 
-    await advance.timeAndBlock(ONE_YEAR);
+      await expect(multiVesting.create(owner, ONE, ONE, ONE, true)).to.be.fulfilled;
 
-    await expect(multiVesting.release(fromUser)).to.be.fulfilled;
+      await expect(multiVesting.begin()).to.be.fulfilled;
+      await advance.timeAndBlock(TWO);
 
-    // TODO Check amount
-    await expect(crunch.balanceOf(user)).to.eventually.be.a.bignumber.not.equal(ZERO);
-  });
+      await expect(multiVesting.revoke(owner)).to.be.fulfilled;
 
-  it("clearFor(address) : not the owner", async () => {
-    await expect(multiVesting.clearFor(user, fromUser)).to.be.rejectedWith(Error, "Ownable: caller is not the owner");
-  });
+      await expect(multiVesting.clear()).to.be.rejectedWith(Error, "MultiVesting: still have tokens");
+    });
 
-  it("clearFor() : no vesting", async () => {
-    await expect(multiVesting.clear()).to.be.rejectedWith(Error, "MultiVesting: address is not vested");
-  });
+    it("ok", async () => {
+      await expect(crunch.transfer(multiVesting.address, ONE)).to.be.fulfilled;
 
-  it("clearFor() : not revoked", async () => {
-    await expect(crunch.transfer(multiVesting.address, ONE)).to.be.fulfilled;
+      await expect(multiVesting.create(owner, ONE, ONE, ONE, true)).to.be.fulfilled;
 
-    await expect(multiVesting.create(user, ONE, ONE, ONE, true)).to.be.fulfilled;
+      await expect(multiVesting.begin()).to.be.fulfilled;
+      await advance.timeAndBlock(TWO);
 
-    await expect(multiVesting.clearFor(user)).to.be.rejectedWith(Error, "MultiVesting: vesting not revoked");
-  });
+      await expect(multiVesting.revoke(owner)).to.be.fulfilled;
+      await expect(multiVesting.release()).to.be.fulfilled;
 
-  it("clearFor() : still have token", async () => {
-    await expect(crunch.transfer(multiVesting.address, ONE)).to.be.fulfilled;
+      await expect(multiVesting.clear()).to.be.fulfilled;
 
-    await expect(multiVesting.create(user, ONE, ONE, ONE, true)).to.be.fulfilled;
-
-    await expect(multiVesting.begin()).to.be.fulfilled;
-    await advance.timeAndBlock(TWO);
-
-    await expect(multiVesting.revoke(user)).to.be.fulfilled;
-
-    await expect(multiVesting.clearFor(user)).to.be.rejectedWith(Error, "MultiVesting: still have tokens");
-  });
-
-  it("clearFor()", async () => {
-    await expect(crunch.transfer(multiVesting.address, ONE)).to.be.fulfilled;
-
-    await expect(multiVesting.create(user, ONE, ONE, ONE, true)).to.be.fulfilled;
-
-    await expect(multiVesting.begin()).to.be.fulfilled;
-    await advance.timeAndBlock(TWO);
-
-    await expect(multiVesting.revoke(user)).to.be.fulfilled;
-    await expect(multiVesting.release(fromUser)).to.be.fulfilled;
-
-    await expect(multiVesting.clearFor(user)).to.be.fulfilled;
-
-    await expect(multiVesting.isVested(user)).to.be.eventually.false;
-  });
-
-  it("clear() : no vesting", async () => {
-    await expect(multiVesting.clear()).to.be.rejectedWith(Error, "MultiVesting: address is not vested");
-  });
-
-  it("clear() : not revoked", async () => {
-    await expect(crunch.transfer(multiVesting.address, ONE)).to.be.fulfilled;
-
-    await expect(multiVesting.create(owner, ONE, ONE, ONE, true)).to.be.fulfilled;
-
-    await expect(multiVesting.clear()).to.be.rejectedWith(Error, "MultiVesting: vesting not revoked");
-  });
-
-  it("clear() : still have token", async () => {
-    await expect(crunch.transfer(multiVesting.address, ONE)).to.be.fulfilled;
-
-    await expect(multiVesting.create(owner, ONE, ONE, ONE, true)).to.be.fulfilled;
-
-    await expect(multiVesting.begin()).to.be.fulfilled;
-    await advance.timeAndBlock(TWO);
-
-    await expect(multiVesting.revoke(owner)).to.be.fulfilled;
-
-    await expect(multiVesting.clear()).to.be.rejectedWith(Error, "MultiVesting: still have tokens");
-  });
-
-  it("clear()", async () => {
-    await expect(crunch.transfer(multiVesting.address, ONE)).to.be.fulfilled;
-
-    await expect(multiVesting.create(owner, ONE, ONE, ONE, true)).to.be.fulfilled;
-
-    await expect(multiVesting.begin()).to.be.fulfilled;
-    await advance.timeAndBlock(TWO);
-
-    await expect(multiVesting.revoke(owner)).to.be.fulfilled;
-    await expect(multiVesting.release()).to.be.fulfilled;
-
-    await expect(multiVesting.clear()).to.be.fulfilled;
-
-    await expect(multiVesting.isVested(owner)).to.be.eventually.false;
+      await expect(multiVesting.isVested(owner)).to.be.eventually.false;
+    });
   });
 });
