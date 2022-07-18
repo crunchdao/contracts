@@ -184,7 +184,7 @@ contract("Crunch Multi Vesting V2", async ([owner, user, ...accounts]) => {
     });
   });
 
-  describe("revoke(address, index) : ", () => {
+  describe("revoke(address, index)", () => {
     it("not revocable", async () => {
       await expect(crunch.transfer(multiVesting.address, ONE)).to.be.fulfilled;
 
