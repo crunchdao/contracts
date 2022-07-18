@@ -165,6 +165,17 @@ contract("Crunch Multi Vesting V2", async ([owner, user, ...accounts]) => {
 
     await expect(multiVesting.isVested(owner)).to.be.eventually.false;
     await expect(multiVesting.isVested(user)).to.be.eventually.true;
+
+    const vesting = await multiVesting.vestings(user);
+    expectVesting(vesting, {
+      beneficiary: user,
+      amount: ONE,
+      cliffDuration: ONE,
+      duration: ONE,
+      revocable: true,
+      revoked: false,
+      released: ZERO,
+    });
   });
 
   it("revoke(address, index) : not revocable", async () => {
