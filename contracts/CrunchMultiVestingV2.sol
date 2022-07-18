@@ -43,6 +43,11 @@ contract CrunchMultiVestingV2 is Ownable {
         address indexed to
     );
 
+    // prettier-ignore
+    event VestingCleared(
+        address indexed beneficiary
+    );
+
     struct Vesting {
         address beneficiary;
         /** the amount of token to vest. */
@@ -216,6 +221,14 @@ contract CrunchMultiVestingV2 is Ownable {
         emit VestingRevoked(beneficiary, refund);
     }
 
+    function clear() external {
+        _clear(_msgSender());
+    }
+
+    function clearFor(address beneficiary) external onlyOwner {
+        _clear(beneficiary);
+    }
+
     /**
      * @notice Get the releasable amount of tokens.
      * @param beneficiary Address to check.
@@ -292,6 +305,17 @@ contract CrunchMultiVestingV2 is Ownable {
 
     function _checkReleased(uint256 released) internal pure {
         require(released > 0, "MultiVesting: no tokens are due");
+    }
+
+    function _clear(address beneficiary) internal {
+        Vesting storage vesting = _getVesting(beneficiary);
+
+        require(vesting.revoked, "MultiVesting: vesting not revoked");
+        require(vesting.amount == vesting.released, "MultiVesting: still have tokens");
+
+        delete vestings[beneficiary];
+
+        emit VestingCleared(beneficiary);
     }
 
     /**
