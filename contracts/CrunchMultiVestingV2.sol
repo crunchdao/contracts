@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.2;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "./access/HasERC677TokenParent.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 /**
@@ -9,7 +9,7 @@ import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
  * @author Enzo CACERES <enzo.caceres@crunchdao.com>
  * @notice Allow the vesting of multiple users using only one contract.
  */
-contract CrunchMultiVestingV2 is Ownable {
+contract CrunchMultiVestingV2 is HasERC677TokenParent {
     // prettier-ignore
     event VestingBegin();
 
@@ -17,12 +17,6 @@ contract CrunchMultiVestingV2 is Ownable {
     event TokensReleased(
         address indexed beneficiary,
         uint256 amount
-    );
-
-    // prettier-ignore
-    event CrunchTokenUpdated(
-        address indexed oldAddress,
-        address indexed newAddress
     );
 
     // prettier-ignore
@@ -65,9 +59,6 @@ contract CrunchMultiVestingV2 is Ownable {
         uint256 released;
     }
 
-    /* CRUNCH erc20 address. */
-    IERC20Metadata public crunch;
-
     /** currently locked tokens that are being used by all of the vestings */
     uint256 public totalSupply;
 
@@ -78,11 +69,9 @@ contract CrunchMultiVestingV2 is Ownable {
 
     /**
      * @notice Instanciate a new contract.
-     * @param crunch_ CRUNCH token address.
+     * @param crunch CRUNCH token address.
      */
-    constructor(address crunch_) {
-        _setCrunch(crunch_);
-    }
+    constructor(address crunch) HasERC677TokenParent(crunch) {}
 
     /**
      * @notice Fake an ERC20-like contract allowing it to be displayed from wallets.
@@ -105,7 +94,7 @@ contract CrunchMultiVestingV2 is Ownable {
      * @return the crunch's decimals value.
      */
     function decimals() external view returns (uint8) {
-        return crunch.decimals();
+        return parentToken.decimals();
     }
 
     /**
@@ -113,7 +102,7 @@ contract CrunchMultiVestingV2 is Ownable {
      * @return The balance of CRUNCH this contract has.
      */
     function reserve() public view returns (uint256) {
-        return crunch.balanceOf(address(this));
+        return parentToken.balanceOf(address(this));
     }
 
     /**
@@ -185,7 +174,7 @@ contract CrunchMultiVestingV2 is Ownable {
 
         vestings[to] = vestings[from];
         vestings[to].beneficiary = to;
-        
+
         delete vestings[from];
 
         emit VestingTransfered(from, to);
@@ -222,7 +211,7 @@ contract CrunchMultiVestingV2 is Ownable {
 
         vesting.revoked = true;
 
-        crunch.transfer(owner(), refund);
+        parentToken.transfer(owner(), refund);
         vesting.amount -= refund;
 
         emit VestingRevoked(beneficiary, refund);
@@ -275,16 +264,6 @@ contract CrunchMultiVestingV2 is Ownable {
     }
 
     /**
-     * @notice Update the CRUNCH token address.
-     * @dev The caller must be the owner.
-     * @dev A `CrunchTokenUpdated` event will be emitted.
-     * @param newCrunch New CRUNCH token address.
-     */
-    function setCrunch(address newCrunch) external onlyOwner {
-        _setCrunch(newCrunch);
-    }
-
-    /**
      * @dev Internal implementation of the release() method.
      * @dev The methods will fail if there is no tokens due.
      * @dev A `TokensReleased` event will be emitted.
@@ -297,7 +276,7 @@ contract CrunchMultiVestingV2 is Ownable {
         unreleased = _releasableAmount(vesting);
         require(unreleased > 0, "MultiVesting: no tokens are due");
 
-        crunch.transfer(vesting.beneficiary, unreleased);
+        parentToken.transfer(vesting.beneficiary, unreleased);
 
         vesting.released += unreleased;
         totalSupply -= unreleased;
@@ -355,21 +334,6 @@ contract CrunchMultiVestingV2 is Ownable {
         require(isVested(beneficiary), "MultiVesting: address is not vested");
 
         return vestings[beneficiary];
-    }
-
-    /**
-     * @dev Update the CRUNCH token address.
-     * @dev A `CrunchTokenUpdated` event will be emitted.
-     * @param newCrunch New CRUNCH token address.
-     */
-    function _setCrunch(address newCrunch) internal {
-        require(address(crunch) != newCrunch, "MultiVesting: crunch is the same as before");
-
-        address previousCrunch = address(crunch);
-
-        crunch = IERC20Metadata(newCrunch);
-
-        emit CrunchTokenUpdated(previousCrunch, address(newCrunch));
     }
 
     modifier onlyWhenNotStarted() {
