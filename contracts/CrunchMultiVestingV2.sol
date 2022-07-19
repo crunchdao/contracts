@@ -333,17 +333,17 @@ contract CrunchMultiVestingV2 is Ownable {
             return 0;
         }
 
-        uint256 cliff = startDate + vesting.cliffDuration;
+        uint256 cliffEnd = startDate + vesting.cliffDuration;
 
-        if (block.timestamp < cliff) {
+        if (block.timestamp < cliffEnd) {
             return 0;
         }
 
-        if ((block.timestamp >= startDate + vesting.duration) || vesting.revoked) {
+        if ((block.timestamp >= cliffEnd + vesting.duration) || vesting.revoked) {
             return vesting.amount;
         }
 
-        return (vesting.amount * (block.timestamp - startDate)) / vesting.duration;
+        return (vesting.amount * (block.timestamp - cliffEnd)) / vesting.duration;
     }
 
     /**

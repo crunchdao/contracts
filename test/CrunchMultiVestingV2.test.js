@@ -11,6 +11,7 @@ const ZERO = new BN("0");
 const ONE = new BN("1");
 const TWO = new BN("2");
 const THREE = new BN("3");
+const TEN = new BN("10");
 const ONE_YEAR = new BN(timeHelper.years(1));
 const TWO_YEAR = new BN(timeHelper.years(2));
 
@@ -218,22 +219,29 @@ contract("Crunch Multi Vesting V2", async ([owner, user, ...accounts]) => {
     });
 
     it("ok", async () => {
-      await expect(crunch.transfer(multiVesting.address, ONE_CRUNCH)).to.be.fulfilled;
+      const half = TEN.divn(2)
+      
+      await expect(crunch.transfer(multiVesting.address, TEN)).to.be.fulfilled;
 
-      await expect(multiVesting.create(user, ONE_CRUNCH, ONE_YEAR, TWO_YEAR, true)).to.be.fulfilled;
+      await expect(multiVesting.create(user, TEN, ONE_YEAR, TWO_YEAR, true)).to.be.fulfilled;
 
       await expect(multiVesting.begin()).to.be.fulfilled;
 
-      await advance.timeAndBlock(ONE_YEAR.add(ONE_YEAR.divn(2)));
+      /* cliff */
+      await advance.timeAndBlock(ONE_YEAR);
+      await expect(multiVesting.releasableAmount(user)).to.eventually.be.a.bignumber.equal(ZERO);
+
+      /* 50% */
+      await advance.timeAndBlock(ONE_YEAR);
+      await expect(multiVesting.releasableAmount(user)).to.eventually.be.a.bignumber.equal(half);
 
       await expect(multiVesting.revoke(user)).to.be.fulfilled;
 
-      await advance.timeAndBlock(ONE_YEAR);
+      await advance.timeAndBlock(ONE_YEAR); /* will do nothing */
 
       await expect(multiVesting.release(fromUser)).to.be.fulfilled;
 
-      // TODO Check amount
-      await expect(crunch.balanceOf(user)).to.eventually.be.a.bignumber.not.equal(ZERO);
+      await expect(crunch.balanceOf(user)).to.eventually.be.a.bignumber.equal(half);
     });
   });
 
