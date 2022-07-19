@@ -291,27 +291,18 @@ contract CrunchMultiVestingV2 is Ownable {
      * @dev If the vesting's released tokens is the same of the vesting's amount, the vesting is considered as finished, and will be removed from the active list.
      * @param beneficiary Address to release.
      */
-    function _release(address beneficiary) internal returns (uint256 released) {
-        released = _doRelease(beneficiary);
-        _checkReleased(released);
-    }
-
-    function _doRelease(address beneficiary) internal returns (uint256 unreleased) {
+    function _release(address beneficiary) internal returns (uint256 unreleased) {
         Vesting storage vesting = _getVesting(beneficiary);
 
         unreleased = _releasableAmount(vesting);
-        if (unreleased != 0) {
-            crunch.transfer(vesting.beneficiary, unreleased);
+        require(unreleased > 0, "MultiVesting: no tokens are due");
 
-            vesting.released += unreleased;
-            totalSupply -= unreleased;
+        crunch.transfer(vesting.beneficiary, unreleased);
 
-            emit TokensReleased(vesting.beneficiary, unreleased);
-        }
-    }
+        vesting.released += unreleased;
+        totalSupply -= unreleased;
 
-    function _checkReleased(uint256 released) internal pure {
-        require(released > 0, "MultiVesting: no tokens are due");
+        emit TokensReleased(vesting.beneficiary, unreleased);
     }
 
     function _clear(address beneficiary) internal {
