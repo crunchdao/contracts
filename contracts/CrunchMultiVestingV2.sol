@@ -11,6 +11,9 @@ import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
  */
 contract CrunchMultiVestingV2 is Ownable {
     // prettier-ignore
+    event VestingBegin();
+
+    // prettier-ignore
     event TokensReleased(
         address indexed beneficiary,
         uint256 amount
@@ -123,6 +126,8 @@ contract CrunchMultiVestingV2 is Ownable {
 
     function begin() external onlyOwner onlyWhenNotStarted {
         startDate = block.timestamp;
+
+        emit VestingBegin();
     }
 
     /**
