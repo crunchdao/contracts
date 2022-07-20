@@ -3,6 +3,7 @@ pragma solidity ^0.8.2;
 
 import "./access/HasERC677TokenParent.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import "@openzeppelin/contracts/utils/Counters.sol";
 
 /**
  * @title Crunch Multi Vesting V2
@@ -10,17 +11,21 @@ import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
  * @notice Allow the vesting of multiple users using only one contract.
  */
 contract CrunchMultiVestingV2 is HasERC677TokenParent {
+    using Counters for Counters.Counter;
+
     // prettier-ignore
     event VestingBegin();
 
     // prettier-ignore
     event TokensReleased(
+        uint256 indexed vestingId,
         address indexed beneficiary,
         uint256 amount
     );
 
     // prettier-ignore
     event VestingCreated(
+        uint256 indexed vestingId,
         address indexed beneficiary,
         uint256 amount,
         uint256 cliffDuration,
@@ -30,22 +35,22 @@ contract CrunchMultiVestingV2 is HasERC677TokenParent {
 
     // prettier-ignore
     event VestingRevoked(
+        uint256 indexed vestingId,
         address indexed beneficiary,
         uint256 refund
     );
 
     // prettier-ignore
     event VestingTransfered(
+        uint256 indexed vestingId,
         address indexed from,
         address indexed to
     );
 
-    // prettier-ignore
-    event VestingCleared(
-        address indexed beneficiary
-    );
-
     struct Vesting {
+        /** vesting id. */
+        uint256 id;
+        /** address that will receive the token. */
         address beneficiary;
         /** the amount of token to vest. */
         uint256 amount;
@@ -53,7 +58,9 @@ contract CrunchMultiVestingV2 is HasERC677TokenParent {
         uint256 cliffDuration;
         /** the duration of the token vesting. */
         uint256 duration;
+        /** whether the vesting can be revoked. */
         bool revocable;
+        /** whether the vesting is revoked. */
         bool revoked;
         /** the amount of the token released. */
         uint256 released;
@@ -65,7 +72,12 @@ contract CrunchMultiVestingV2 is HasERC677TokenParent {
     uint256 public startDate;
 
     /** mapping to vesting list */
-    mapping(address => Vesting) public vestings;
+    mapping(uint256 => Vesting) public vestings;
+
+    /** mapping to list of address's owning vesting id */
+    mapping(address => uint256[]) public ownerships;
+
+    Counters.Counter private _idCounter;
 
     /**
      * @notice Instanciate a new contract.
@@ -144,14 +156,16 @@ contract CrunchMultiVestingV2 is HasERC677TokenParent {
         bool revocable
     ) external onlyOwner onlyWhenNotStarted {
         require(beneficiary != address(0), "MultiVesting: beneficiary is the zero address");
-        require(!isVested(beneficiary), "MultiVesting: beneficiary is already vested");
         require(amount > 0, "MultiVesting: amount is 0");
         require(duration > 0, "MultiVesting: duration is 0");
         require(cliffDuration <= duration, "MultiVesting: cliff is longer than duration");
         require(availableReserve() >= amount, "MultiVesting: available reserve is not enough");
 
+        uint256 vestingId = _nextId();
+
         // prettier-ignore
-        vestings[beneficiary] = Vesting({
+        vestings[vestingId] = Vesting({
+            id: vestingId,
             beneficiary: beneficiary,
             amount: amount,
             cliffDuration: cliffDuration,
@@ -161,106 +175,79 @@ contract CrunchMultiVestingV2 is HasERC677TokenParent {
             released: 0
         });
 
+        _addOwnership(beneficiary, vestingId);
+
         totalSupply += amount;
 
-        emit VestingCreated(beneficiary, amount, cliffDuration, duration, revocable);
+        emit VestingCreated(vestingId, beneficiary, amount, cliffDuration, duration, revocable);
     }
 
-    function transfer(address to) external {
-        address from = _msgSender();
-
-        require(isVested(from), "MultiVesting: not currently vesting");
-        require(!isVested(to), "MultiVesting: new beneficiary is already vested");
-
-        vestings[to] = vestings[from];
-        vestings[to].beneficiary = to;
-
-        delete vestings[from];
-
-        emit VestingTransfered(from, to);
+    function transfer(address to, uint256 vestingId) external {
+        _transfer(_getVesting(vestingId, _msgSender()), to);
     }
 
-    /**
-     * @notice Release a vesting of the current caller.
-     * @dev A `TokensReleased` event will be emitted.
-     * @dev The transaction will fail if no token are due.
-     */
-    function release() external returns (uint256) {
-        return _release(_msgSender());
+    function release(uint256 vestingId) external returns (uint256) {
+        return _release(_getVesting(vestingId, _msgSender()));
     }
 
-    /**
-     * @notice Release a vesting of a specified address.
-     * @dev The caller must be the owner.
-     * @dev A `TokensReleased` event will be emitted.
-     * @dev The transaction will fail if no token are due.
-     * @param beneficiary Address to release.
-     */
-    function releaseFor(address beneficiary) external onlyOwner returns (uint256) {
-        return _release(beneficiary);
+    function releaseFor(uint256 vestingId) external onlyOwner returns (uint256) {
+        return _release(_getVesting(vestingId));
     }
 
-    function revoke(address beneficiary) public onlyOwner {
-        Vesting storage vesting = _getVesting(beneficiary);
-
-        require(vesting.revocable, "MultiVesting: token not revocable");
-        require(!vesting.revoked, "MultiVesting: token already revoked");
-
-        uint256 unreleased = _releasableAmount(vesting);
-        uint256 refund = vesting.amount - unreleased;
-
-        vesting.revoked = true;
-
-        parentToken.transfer(owner(), refund);
-        vesting.amount -= refund;
-
-        emit VestingRevoked(beneficiary, refund);
+    function revoke(uint256 vestingId) public onlyOwner returns (uint256) {
+        return _revoke(_getVesting(vestingId));
     }
 
-    function clear() external {
-        _clear(_msgSender());
-    }
-
-    function clearFor(address beneficiary) external onlyOwner {
-        _clear(beneficiary);
+    function isBeneficiary(uint256 vestingId, address account) public view returns (bool) {
+        return _isBeneficiary(_getVesting(vestingId), account);
     }
 
     /**
      * @notice Get the releasable amount of tokens.
-     * @param beneficiary Address to check.
+     * @param vestingId Vesting ID to check.
      * @return The releasable amounts.
      */
-    function releasableAmount(address beneficiary) public view returns (uint256) {
-        Vesting storage vesting = _getVesting(beneficiary);
-
-        return _releasableAmount(vesting);
+    function releasableAmount(uint256 vestingId) public view returns (uint256) {
+        return _releasableAmount(_getVesting(vestingId));
     }
 
     /**
      * @notice Get the vested amount of tokens.
-     * @param beneficiary Address to check.
+     * @param vestingId Vesting ID to check.
      * @return The vested amount of the vestings.
      */
-    function vestedAmount(address beneficiary) public view returns (uint256) {
-        Vesting storage vesting = _getVesting(beneficiary);
-
-        return _vestedAmount(vesting);
+    function vestedAmount(uint256 vestingId) public view returns (uint256) {
+        return _vestedAmount(_getVesting(vestingId));
     }
 
-    /**
-     * @notice Get the remaining amount of token of a beneficiary.
-     * @dev This function is to make wallets able to display the amount in their UI.
-     * @param beneficiary Address to check.
-     * @return The remaining amount of tokens.
-     */
-    function balanceOf(address beneficiary) external view returns (uint256) {
-        Vesting storage vesting = _getVesting(beneficiary);
-
-        return vesting.amount - vesting.released;
+    function ownedCount(address beneficiary) public view returns (uint256) {
+        return ownerships[beneficiary].length;
     }
 
-    function isVested(address beneficiary) public view returns (bool) {
-        return vestings[beneficiary].duration != 0;
+    // /**
+    //  * @notice Get the remaining amount of token of a beneficiary.
+    //  * @dev This function is to make wallets able to display the amount in their UI.
+    //  * @param beneficiary Address to check.
+    //  * @return The remaining amount of tokens.
+    //  */
+    // function balanceOf(address beneficiary) external view returns (uint256) {
+    //     Vesting storage vesting = _getVesting(beneficiary);
+
+    //     return vesting.amount - vesting.released;
+    // }
+
+    function _transfer(Vesting storage vesting, address to) internal {
+        address from = vesting.beneficiary;
+
+        require(from != to, "MultiVesting: cannot transfer to itself");
+        require(to != address(0), "MultiVesting: target is the zero address");
+
+        _removeOwnership(from, vesting.id);
+        _addOwnership(to, vesting.id);
+
+        vesting.beneficiary = to;
+
+        emit VestingTransfered(vesting.id, from, to);
     }
 
     /**
@@ -268,11 +255,9 @@ contract CrunchMultiVestingV2 is HasERC677TokenParent {
      * @dev The methods will fail if there is no tokens due.
      * @dev A `TokensReleased` event will be emitted.
      * @dev If the vesting's released tokens is the same of the vesting's amount, the vesting is considered as finished, and will be removed from the active list.
-     * @param beneficiary Address to release.
+     * @param vesting Vesting to release.
      */
-    function _release(address beneficiary) internal returns (uint256 unreleased) {
-        Vesting storage vesting = _getVesting(beneficiary);
-
+    function _release(Vesting storage vesting) internal returns (uint256 unreleased) {
         unreleased = _releasableAmount(vesting);
         require(unreleased > 0, "MultiVesting: no tokens are due");
 
@@ -281,18 +266,26 @@ contract CrunchMultiVestingV2 is HasERC677TokenParent {
         vesting.released += unreleased;
         totalSupply -= unreleased;
 
-        emit TokensReleased(vesting.beneficiary, unreleased);
+        emit TokensReleased(vesting.id, vesting.beneficiary, unreleased);
     }
 
-    function _clear(address beneficiary) internal {
-        Vesting storage vesting = _getVesting(beneficiary);
+    function _revoke(Vesting storage vesting) internal returns (uint256 refund) {
+        require(vesting.revocable, "MultiVesting: token not revocable");
+        require(!vesting.revoked, "MultiVesting: token already revoked");
 
-        require(vesting.revoked, "MultiVesting: vesting not revoked");
-        require(vesting.amount == vesting.released, "MultiVesting: still have tokens");
+        uint256 unreleased = _releasableAmount(vesting);
+        refund = vesting.amount - unreleased;
 
-        delete vestings[beneficiary];
+        vesting.revoked = true;
 
-        emit VestingCleared(beneficiary);
+        parentToken.transfer(owner(), refund);
+        vesting.amount -= refund;
+
+        emit VestingRevoked(vesting.id, vesting.beneficiary, refund);
+    }
+
+    function _isBeneficiary(Vesting storage vesting, address account) internal view returns (bool) {
+        return vesting.beneficiary == account;
     }
 
     /**
@@ -327,13 +320,58 @@ contract CrunchMultiVestingV2 is HasERC677TokenParent {
 
     /**
      * @dev Get a vesting.
+     * @return vesting struct stored in the storage.
+     */
+    function _getVesting(uint256 vestingId) internal view returns (Vesting storage vesting) {
+        vesting = vestings[vestingId];
+        require(vesting.beneficiary != address(0), "MultiVesting: vesting does not exists");
+    }
+
+    /**
+     * @dev Get a vesting and make sure it is from the right beneficiary.
      * @param beneficiary Address to get it from.
      * @return vesting struct stored in the storage.
      */
-    function _getVesting(address beneficiary) internal view returns (Vesting storage) {
-        require(isVested(beneficiary), "MultiVesting: address is not vested");
+    function _getVesting(uint256 vestingId, address beneficiary) internal view returns (Vesting storage vesting) {
+        vesting = _getVesting(vestingId);
+        require(vesting.beneficiary == beneficiary, "MultiVesting: not the beneficiary");
+    }
 
-        return vestings[beneficiary];
+    function _nextId() internal returns (uint256 id) {
+        id = _idCounter.current();
+        _idCounter.increment();
+    }
+
+    function _indexOf(uint256[] storage array, uint256 value) internal view returns (bool, uint256) {
+        for (uint256 index = 0; index < array.length; ++index) {
+            if (array[index] == value) {
+                return (true, index);
+            }
+        }
+
+        return (false, 0);
+    }
+
+    function _removeOwnership(address account, uint256 vestingId) internal returns (bool) {
+        uint256[] storage indexes = ownerships[account];
+
+        (bool found, uint256 index) = _indexOf(indexes, vestingId);
+        if (!found) {
+            return false;
+        }
+
+        if (indexes.length <= 1) {
+            delete ownerships[account];
+        } else {
+            indexes[index] = indexes[indexes.length] - 1;
+            indexes.pop();
+        }
+
+        return true;
+    }
+
+    function _addOwnership(address account, uint256 vestingId) internal {
+        ownerships[account].push(vestingId);
     }
 
     modifier onlyWhenNotStarted() {
