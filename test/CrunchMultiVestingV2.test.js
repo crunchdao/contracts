@@ -186,6 +186,22 @@ contract("Crunch Multi Vesting V2", async ([owner, user, ...accounts]) => {
     });
   });
 
+  describe("release()", () => {
+    it("not staking", async () => {
+      await expect(multiVesting.release(fromUser)).to.be.rejectedWith(Error, "MultiVesting: address is not vested");
+    });
+  });
+
+  describe("releaseFor(address)", () => {
+    it("not the owner", async () => {
+      await expect(multiVesting.releaseFor(user, fromUser)).to.be.rejectedWith(Error, "Ownable: caller is not the owner");
+    });
+
+    it("not staking", async () => {
+      await expect(multiVesting.releaseFor(user)).to.be.rejectedWith(Error, "MultiVesting: address is not vested");
+    });
+  });
+
   describe("revoke(address, index)", () => {
     it("not revocable", async () => {
       await expect(crunch.transfer(multiVesting.address, ONE)).to.be.fulfilled;
@@ -221,7 +237,7 @@ contract("Crunch Multi Vesting V2", async ([owner, user, ...accounts]) => {
 
     it("ok", async () => {
       const half = TEN.divn(2)
-      
+
       await expect(crunch.transfer(multiVesting.address, TEN)).to.be.fulfilled;
 
       await expect(multiVesting.create(user, TEN, ONE_YEAR, TWO_YEAR, true)).to.be.fulfilled;
