@@ -75,7 +75,7 @@ contract CrunchMultiVestingV2 is HasERC677TokenParent {
     mapping(uint256 => Vesting) public vestings;
 
     /** mapping to list of address's owning vesting id */
-    mapping(address => uint256[]) public ownerships;
+    mapping(address => uint256[]) public owned;
 
     Counters.Counter private _idCounter;
 
@@ -221,7 +221,7 @@ contract CrunchMultiVestingV2 is HasERC677TokenParent {
     }
 
     function ownedCount(address beneficiary) public view returns (uint256) {
-        return ownerships[beneficiary].length;
+        return owned[beneficiary].length;
     }
 
     // /**
@@ -353,7 +353,7 @@ contract CrunchMultiVestingV2 is HasERC677TokenParent {
     }
 
     function _removeOwnership(address account, uint256 vestingId) internal returns (bool) {
-        uint256[] storage indexes = ownerships[account];
+        uint256[] storage indexes = owned[account];
 
         (bool found, uint256 index) = _indexOf(indexes, vestingId);
         if (!found) {
@@ -361,7 +361,7 @@ contract CrunchMultiVestingV2 is HasERC677TokenParent {
         }
 
         if (indexes.length <= 1) {
-            delete ownerships[account];
+            delete owned[account];
         } else {
             indexes[index] = indexes[indexes.length] - 1;
             indexes.pop();
@@ -371,7 +371,7 @@ contract CrunchMultiVestingV2 is HasERC677TokenParent {
     }
 
     function _addOwnership(address account, uint256 vestingId) internal {
-        ownerships[account].push(vestingId);
+        owned[account].push(vestingId);
     }
 
     modifier onlyWhenNotStarted() {
