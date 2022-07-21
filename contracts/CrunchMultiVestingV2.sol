@@ -427,7 +427,7 @@ contract CrunchMultiVestingV2 is HasERC677TokenParent {
         if (indexes.length <= 1) {
             delete owned[account];
         } else {
-            indexes[index] = indexes[indexes.length] - 1;
+            indexes[index] = indexes[indexes.length - 1];
             indexes.pop();
         }
 
