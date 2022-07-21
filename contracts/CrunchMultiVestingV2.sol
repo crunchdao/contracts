@@ -148,7 +148,7 @@ contract CrunchMultiVestingV2 is HasERC677TokenParent {
      * @param cliffDuration Cliff duration in seconds.
      * @param duration Vesting duration in seconds.
      */
-    function create(
+    function vest(
         address beneficiary,
         uint256 amount,
         uint256 cliffDuration,
