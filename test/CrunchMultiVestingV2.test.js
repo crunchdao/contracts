@@ -211,6 +211,12 @@ contract("Crunch Multi Vesting V2", async ([owner, user, ...accounts]) => {
     });
   });
 
+  describe("releaseAll()", () => {
+    it("nothing is due", async () => {
+      await expect(multiVesting.releaseAll(fromUser)).to.be.rejectedWith(Error, "MultiVesting: no tokens are due");
+    });
+  });
+
   describe("releaseFor(address)", () => {
     it("not the owner", async () => {
       await expect(multiVesting.releaseFor(ZERO, fromUser)).to.be.rejectedWith(Error, "Ownable: caller is not the owner");
@@ -218,6 +224,16 @@ contract("Crunch Multi Vesting V2", async ([owner, user, ...accounts]) => {
 
     it("not existing", async () => {
       await expect(multiVesting.releaseFor(ZERO)).to.be.rejectedWith(Error, "MultiVesting: vesting does not exists");
+    });
+  });
+
+  describe("releaseAllFor()", () => {
+    it("not the owner", async () => {
+      await expect(multiVesting.releaseAllFor(user, fromUser)).to.be.rejectedWith(Error, "Ownable: caller is not the owner");
+    });
+
+    it("nothing is due", async () => {
+      await expect(multiVesting.releaseAllFor(user)).to.be.rejectedWith(Error, "MultiVesting: no tokens are due");
     });
   });
 
@@ -277,7 +293,7 @@ contract("Crunch Multi Vesting V2", async ([owner, user, ...accounts]) => {
 
       await expect(multiVesting.release(ZERO, fromUser)).to.be.fulfilled;
 
-      // await expect(crunch.balanceOf(user)).to.eventually.be.a.bignumber.equal(half);
+      await expect(crunch.balanceOf(user)).to.eventually.be.a.bignumber.equal(half);
     });
   });
 });
