@@ -11,6 +11,7 @@ const ZERO = new BN("0");
 const ONE = new BN("1");
 const TWO = new BN("2");
 const THREE = new BN("3");
+const FOUR = new BN("4");
 const TEN = new BN("10");
 const ONE_YEAR = new BN(timeHelper.years(1));
 const TWO_YEAR = new BN(timeHelper.years(2));
@@ -556,5 +557,36 @@ contract("Crunch Multi Vesting V2", async ([owner, user, ...accounts]) => {
         await expect(multiVesting.vestedAmount(id)).to.be.eventually.be.a.bignumber.equals(new BN(5));
       });
     });
+  });
+
+  it("ownedCount(address)", async () => {
+    await expect(crunch.transfer(multiVesting.address, TEN)).to.be.fulfilled;
+
+    await expect(multiVesting.ownedCount(user)).to.be.eventually.a.bignumber.equals(ZERO);
+
+    await expect(multiVesting.vest(user, ONE, ONE, ONE, true)).to.be.fulfilled;
+    await expect(multiVesting.ownedCount(user)).to.be.eventually.a.bignumber.equals(ONE);
+
+    await expect(multiVesting.vest(user, ONE, ONE, ONE, true)).to.be.fulfilled;
+    await expect(multiVesting.ownedCount(user)).to.be.eventually.a.bignumber.equals(TWO);
+
+    await expect(multiVesting.vest(user, ONE, ONE, ONE, true)).to.be.fulfilled;
+    await expect(multiVesting.ownedCount(user)).to.be.eventually.a.bignumber.equals(THREE);
+
+    await expect(multiVesting.vest(owner, ONE, ONE, ONE, true)).to.be.fulfilled;
+    await expect(multiVesting.ownedCount(user)).to.be.eventually.a.bignumber.equals(THREE);
+    await expect(multiVesting.ownedCount(owner)).to.be.eventually.a.bignumber.equals(ONE);
+
+    await expect(multiVesting.transfer(owner, new BN(0), fromUser)).to.be.fulfilled;
+    await expect(multiVesting.ownedCount(owner)).to.be.eventually.a.bignumber.equals(TWO);
+    await expect(multiVesting.ownedCount(user)).to.be.eventually.a.bignumber.equals(TWO);
+
+    await expect(multiVesting.transfer(owner, new BN(1), fromUser)).to.be.fulfilled;
+    await expect(multiVesting.ownedCount(owner)).to.be.eventually.a.bignumber.equals(THREE);
+    await expect(multiVesting.ownedCount(user)).to.be.eventually.a.bignumber.equals(ONE);
+
+    await expect(multiVesting.transfer(owner, new BN(2), fromUser)).to.be.fulfilled;
+    await expect(multiVesting.ownedCount(owner)).to.be.eventually.a.bignumber.equals(FOUR);
+    await expect(multiVesting.ownedCount(user)).to.be.eventually.a.bignumber.equals(ZERO);
   });
 });
