@@ -78,9 +78,9 @@ contract("Crunch Multi Vesting V2", async ([owner, user, ...accounts]) => {
     await expect(multiVesting.availableReserve()).to.eventually.be.a.bignumber.equal(half);
   });
 
-  describe("begin()", () => {
+  describe("beginNow()", () => {
     it("ok", async () => {
-      const transaction = await expect(multiVesting.begin()).to.be.fulfilled;
+      const transaction = await expect(multiVesting.beginNow()).to.be.fulfilled;
       const { blockNumber } = transaction.receipt;
       const { timestamp } = await blockHelper.get(blockNumber);
 
@@ -88,12 +88,34 @@ contract("Crunch Multi Vesting V2", async ([owner, user, ...accounts]) => {
     });
 
     it("only owner", async () => {
-      await expect(multiVesting.begin(fromUser)).to.be.rejectedWith(Error, "Ownable: caller is not the owner");
+      await expect(multiVesting.beginNow(fromUser)).to.be.rejectedWith(Error, "Ownable: caller is not the owner");
     });
 
     it("cannot be called twice", async () => {
-      await expect(multiVesting.begin()).to.be.fulfilled;
-      await expect(multiVesting.begin()).to.be.rejectedWith(Error, "MultiVesting: already started");
+      await expect(multiVesting.beginNow()).to.be.fulfilled;
+      await expect(multiVesting.beginNow()).to.be.rejectedWith(Error, "MultiVesting: already started");
+    });
+  });
+
+  describe("beginAt(uint256)", () => {
+    const timestamp = new BN(1234);
+
+    it("ok", async () => {
+      await expect(multiVesting.beginAt(timestamp)).to.be.fulfilled;
+      await expect(multiVesting.startDate()).to.eventually.a.bignumber.equal(new BN(timestamp));
+    });
+
+    it("timestamp=0", async () => {
+      await expect(multiVesting.beginAt(ZERO)).to.be.rejectedWith(Error, "MultiVesting: timestamp cannot be zero");
+    });
+
+    it("only owner", async () => {
+      await expect(multiVesting.beginAt(timestamp, fromUser)).to.be.rejectedWith(Error, "Ownable: caller is not the owner");
+    });
+
+    it("cannot be called twice", async () => {
+      await expect(multiVesting.beginAt(timestamp)).to.be.fulfilled;
+      await expect(multiVesting.beginAt(timestamp)).to.be.rejectedWith(Error, "MultiVesting: already started");
     });
   });
 
@@ -261,7 +283,7 @@ contract("Crunch Multi Vesting V2", async ([owner, user, ...accounts]) => {
 
       await expect(multiVesting.vest(user, ONE, ONE_YEAR, TWO_YEAR, true)).to.be.fulfilled;
 
-      await expect(multiVesting.begin()).to.be.fulfilled;
+      await expect(multiVesting.beginNow()).to.be.fulfilled;
 
       await expect(multiVesting.revoke(ZERO)).to.be.fulfilled;
 
@@ -277,7 +299,7 @@ contract("Crunch Multi Vesting V2", async ([owner, user, ...accounts]) => {
 
       await expect(multiVesting.vest(user, TEN, ONE_YEAR, TWO_YEAR, true)).to.be.fulfilled;
 
-      await expect(multiVesting.begin()).to.be.fulfilled;
+      await expect(multiVesting.beginNow()).to.be.fulfilled;
 
       /* cliff */
       await advance.timeAndBlock(ONE_YEAR);
