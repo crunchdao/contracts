@@ -589,4 +589,52 @@ contract("Crunch Multi Vesting V2", async ([owner, user, ...accounts]) => {
     await expect(multiVesting.ownedCount(owner)).to.be.eventually.a.bignumber.equals(FOUR);
     await expect(multiVesting.ownedCount(user)).to.be.eventually.a.bignumber.equals(ZERO);
   });
+
+  describe("balanceOfVesting(uint256)", () => {
+    it("ok", async () => {
+      const id = ZERO;
+
+      await expect(crunch.transfer(multiVesting.address, TEN)).to.be.fulfilled;
+      await expect(multiVesting.vest(user, TEN, timeHelper.days(2), timeHelper.days(10), true)).to.be.fulfilled;
+
+      await expect(multiVesting.beginNow()).to.be.fulfilled;
+      await expect(multiVesting.balanceOfVesting(id)).to.be.eventually.a.bignumber.equals(TEN);
+
+      await advance.timeAndBlock(timeHelper.days(2 + 5))
+      await expect(multiVesting.balanceOfVesting(id)).to.be.eventually.a.bignumber.equals(TEN);
+
+      await expect(multiVesting.release(id, fromUser)).to.be.fulfilled;
+      await expect(multiVesting.balanceOfVesting(id)).to.be.eventually.a.bignumber.equals(new BN(5));
+
+      await advance.timeAndBlock(timeHelper.days(5))
+      await expect(multiVesting.release(id, fromUser)).to.be.fulfilled;
+      await expect(multiVesting.balanceOfVesting(id)).to.be.eventually.a.bignumber.equals(ZERO);
+    });
+
+    it("not existing", async () => {
+      await expect(multiVesting.balanceOfVesting(ZERO)).to.be.rejectedWith(Error, "MultiVesting: vesting does not exists");
+    });
+
+    it("revoked", async () => {
+      const id = ZERO;
+
+      await expect(crunch.transfer(multiVesting.address, TEN)).to.be.fulfilled;
+      await expect(multiVesting.vest(user, TEN, timeHelper.days(2), timeHelper.days(10), true)).to.be.fulfilled;
+
+      await expect(multiVesting.beginNow()).to.be.fulfilled;
+      await expect(multiVesting.balanceOfVesting(id)).to.be.eventually.a.bignumber.equals(TEN);
+
+      await advance.timeAndBlock(timeHelper.days(2 + 5))
+      await expect(multiVesting.balanceOfVesting(id)).to.be.eventually.a.bignumber.equals(TEN);
+
+      await expect(multiVesting.revoke(id)).to.be.fulfilled;
+      await expect(multiVesting.balanceOfVesting(id)).to.be.eventually.a.bignumber.equals(new BN(5));
+
+      await expect(multiVesting.release(id, fromUser)).to.be.fulfilled;
+      await expect(multiVesting.balanceOfVesting(id)).to.be.eventually.a.bignumber.equals(ZERO);
+
+      await advance.timeAndBlock(timeHelper.days(5))
+      await expect(multiVesting.balanceOfVesting(id)).to.be.eventually.a.bignumber.equals(ZERO);
+    });
+  });
 });
