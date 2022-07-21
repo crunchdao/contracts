@@ -261,11 +261,11 @@ contract CrunchMultiVestingV2 is HasERC677TokenParent {
         for (uint256 index = 0; index < indexes.length; ++index) {
             uint256 vestingId = indexes[index];
 
-            balance += balanceOf(vestingId);
+            balance += balanceOfVesting(vestingId);
         }
     }
 
-    function balanceOf(uint256 vestingId) public view returns (uint256) {
+    function balanceOfVesting(uint256 vestingId) public view returns (uint256) {
         Vesting storage vesting = _getVesting(vestingId);
 
         return vesting.amount - vesting.released;
