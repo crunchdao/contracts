@@ -332,4 +332,25 @@ contract("Crunch Multi Vesting V2", async ([owner, user, ...accounts]) => {
       await expect(multiVesting.isBeneficiary(ZERO, user)).to.be.eventually.true
     });
   });
+
+  describe("isVested(address)", () => {
+    it("ok", async () => {
+      await expect(crunch.transfer(multiVesting.address, THREE)).to.be.fulfilled;
+
+      await expect(multiVesting.isVested(owner)).to.be.eventually.false
+      await expect(multiVesting.isVested(user)).to.be.eventually.false
+
+      await expect(multiVesting.vest(user, ONE, ONE, ONE, true)).to.be.fulfilled;
+      await expect(multiVesting.isVested(owner)).to.be.eventually.false
+      await expect(multiVesting.isVested(user)).to.be.eventually.true
+
+      await expect(multiVesting.vest(user, ONE, ONE, ONE, true)).to.be.fulfilled;
+      await expect(multiVesting.isVested(owner)).to.be.eventually.false
+      await expect(multiVesting.isVested(user)).to.be.eventually.true
+
+      await expect(multiVesting.vest(owner, ONE, ONE, ONE, true)).to.be.fulfilled;
+      await expect(multiVesting.isVested(owner)).to.be.eventually.true
+      await expect(multiVesting.isVested(user)).to.be.eventually.true
+    });
+  });
 });
