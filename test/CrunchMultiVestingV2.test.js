@@ -323,13 +323,13 @@ contract("Crunch Multi Vesting V2", async ([owner, user, ...accounts]) => {
     it("not existing", async () => {
       await expect(multiVesting.isBeneficiary(ZERO, owner)).to.be.rejectedWith(Error, "MultiVesting: vesting does not exists");
     });
-    
+
     it("ok", async () => {
       await expect(crunch.transfer(multiVesting.address, ONE)).to.be.fulfilled;
       await expect(multiVesting.vest(user, ONE, ONE, ONE, true)).to.be.fulfilled;
 
-      await expect(multiVesting.isBeneficiary(ZERO, owner)).to.be.eventually.false
-      await expect(multiVesting.isBeneficiary(ZERO, user)).to.be.eventually.true
+      await expect(multiVesting.isBeneficiary(ZERO, owner)).to.be.eventually.false;
+      await expect(multiVesting.isBeneficiary(ZERO, user)).to.be.eventually.true;
     });
   });
 
@@ -337,20 +337,224 @@ contract("Crunch Multi Vesting V2", async ([owner, user, ...accounts]) => {
     it("ok", async () => {
       await expect(crunch.transfer(multiVesting.address, THREE)).to.be.fulfilled;
 
-      await expect(multiVesting.isVested(owner)).to.be.eventually.false
-      await expect(multiVesting.isVested(user)).to.be.eventually.false
+      await expect(multiVesting.isVested(owner)).to.be.eventually.false;
+      await expect(multiVesting.isVested(user)).to.be.eventually.false;
 
       await expect(multiVesting.vest(user, ONE, ONE, ONE, true)).to.be.fulfilled;
-      await expect(multiVesting.isVested(owner)).to.be.eventually.false
-      await expect(multiVesting.isVested(user)).to.be.eventually.true
+      await expect(multiVesting.isVested(owner)).to.be.eventually.false;
+      await expect(multiVesting.isVested(user)).to.be.eventually.true;
 
       await expect(multiVesting.vest(user, ONE, ONE, ONE, true)).to.be.fulfilled;
-      await expect(multiVesting.isVested(owner)).to.be.eventually.false
-      await expect(multiVesting.isVested(user)).to.be.eventually.true
+      await expect(multiVesting.isVested(owner)).to.be.eventually.false;
+      await expect(multiVesting.isVested(user)).to.be.eventually.true;
 
       await expect(multiVesting.vest(owner, ONE, ONE, ONE, true)).to.be.fulfilled;
-      await expect(multiVesting.isVested(owner)).to.be.eventually.true
-      await expect(multiVesting.isVested(user)).to.be.eventually.true
+      await expect(multiVesting.isVested(owner)).to.be.eventually.true;
+      await expect(multiVesting.isVested(user)).to.be.eventually.true;
+    });
+  });
+
+  describe("releasableAmount(uint256)", () => {
+    it("not existing", async () => {
+      await expect(multiVesting.releasableAmount(ZERO)).to.be.rejectedWith(Error, "MultiVesting: vesting does not exists");
+    });
+
+    it("ok", async () => {
+      const id = ZERO;
+
+      await expect(crunch.transfer(multiVesting.address, TEN)).to.be.fulfilled;
+      await expect(multiVesting.vest(user, TEN, timeHelper.days(2), timeHelper.days(10), true)).to.be.fulfilled;
+
+      await expect(multiVesting.releasableAmount(id)).to.be.eventually.be.a.bignumber.equals(ZERO);
+
+      await advance.timeAndBlock(timeHelper.months(1));
+
+      await expect(multiVesting.releasableAmount(id)).to.be.eventually.be.a.bignumber.equals(ZERO);
+
+      await expect(multiVesting.beginNow()).to.be.fulfilled;
+
+      await expect(multiVesting.releasableAmount(id)).to.be.eventually.be.a.bignumber.equals(ZERO);
+
+      for (let index = 0; index < 2; ++index) {
+        await advance.timeAndBlock(timeHelper.days(1));
+        await expect(multiVesting.releasableAmount(id)).to.be.eventually.be.a.bignumber.equals(ZERO);
+      }
+
+      await advance.timeAndBlock(timeHelper.days(1));
+      await expect(multiVesting.releasableAmount(id)).to.be.eventually.be.a.bignumber.equals(ONE);
+
+      await advance.timeAndBlock(timeHelper.days(4));
+      await expect(multiVesting.releasableAmount(id)).to.be.eventually.be.a.bignumber.equals(new BN(5));
+
+      await expect(multiVesting.release(id, fromUser)).to.be.fulfilled;
+      await expect(multiVesting.releasableAmount(id)).to.be.eventually.be.a.bignumber.equals(ZERO);
+
+      await advance.timeAndBlock(timeHelper.days(4));
+      await expect(multiVesting.releasableAmount(id)).to.be.eventually.be.a.bignumber.equals(new BN(4));
+
+      for (let index = 0; index < 2; ++index) {
+        await advance.timeAndBlock(timeHelper.days(1));
+        await expect(multiVesting.releasableAmount(id)).to.be.eventually.be.a.bignumber.equals(new BN(5));
+      }
+
+      await expect(multiVesting.release(id, fromUser)).to.be.fulfilled;
+      await expect(multiVesting.releasableAmount(id)).to.be.eventually.be.a.bignumber.equals(ZERO);
+
+      await advance.timeAndBlock(timeHelper.days(1));
+      await expect(multiVesting.releasableAmount(id)).to.be.eventually.be.a.bignumber.equals(ZERO);
+    });
+
+    describe("revoked", () => {
+      it("before start", async () => {
+        const id = ZERO;
+
+        await expect(crunch.transfer(multiVesting.address, TEN)).to.be.fulfilled;
+        await expect(multiVesting.vest(user, TEN, timeHelper.days(2), timeHelper.days(10), true)).to.be.fulfilled;
+
+        await expect(multiVesting.revoke(id)).to.be.fulfilled;
+
+        await expect(multiVesting.beginNow()).to.be.fulfilled;
+
+        await advance.timeAndBlock(timeHelper.days(10));
+        await expect(multiVesting.releasableAmount(id)).to.be.eventually.be.a.bignumber.equals(ZERO);
+      });
+
+      it("before cliff", async () => {
+        const id = ZERO;
+
+        await expect(crunch.transfer(multiVesting.address, TEN)).to.be.fulfilled;
+        await expect(multiVesting.vest(user, TEN, timeHelper.days(2), timeHelper.days(10), true)).to.be.fulfilled;
+
+        await expect(multiVesting.beginNow()).to.be.fulfilled;
+
+        await advance.timeAndBlock(timeHelper.days(1));
+
+        await expect(multiVesting.revoke(id)).to.be.fulfilled;
+
+        await advance.timeAndBlock(timeHelper.days(10));
+        await expect(multiVesting.releasableAmount(id)).to.be.eventually.be.a.bignumber.equals(ZERO);
+      });
+
+      it("mid", async () => {
+        const id = ZERO;
+
+        await expect(crunch.transfer(multiVesting.address, TEN)).to.be.fulfilled;
+        await expect(multiVesting.vest(user, TEN, timeHelper.days(2), timeHelper.days(10), true)).to.be.fulfilled;
+
+        await expect(multiVesting.beginNow()).to.be.fulfilled;
+
+        await advance.timeAndBlock(timeHelper.days(2 + 5));
+
+        await expect(multiVesting.revoke(id)).to.be.fulfilled;
+
+        await advance.timeAndBlock(timeHelper.days(10));
+        await expect(multiVesting.releasableAmount(id)).to.be.eventually.be.a.bignumber.equals(new BN(5));
+
+        await expect(multiVesting.release(id, fromUser)).to.be.fulfilled;
+        await expect(multiVesting.releasableAmount(id)).to.be.eventually.be.a.bignumber.equals(new BN(ZERO));
+      });
+    });
+  });
+
+  describe("vestedAmount(uint256)", () => {
+    it("not existing", async () => {
+      await expect(multiVesting.vestedAmount(ZERO)).to.be.rejectedWith(Error, "MultiVesting: vesting does not exists");
+    });
+
+    it("ok", async () => {
+      const id = ZERO;
+
+      await expect(crunch.transfer(multiVesting.address, TEN)).to.be.fulfilled;
+      await expect(multiVesting.vest(user, TEN, timeHelper.days(2), timeHelper.days(10), true)).to.be.fulfilled;
+
+      await expect(multiVesting.vestedAmount(id)).to.be.eventually.be.a.bignumber.equals(ZERO);
+
+      await advance.timeAndBlock(timeHelper.months(1));
+
+      await expect(multiVesting.vestedAmount(id)).to.be.eventually.be.a.bignumber.equals(ZERO);
+
+      await expect(multiVesting.beginNow()).to.be.fulfilled;
+
+      await expect(multiVesting.vestedAmount(id)).to.be.eventually.be.a.bignumber.equals(ZERO);
+
+      for (let index = 0; index < 2; ++index) {
+        await advance.timeAndBlock(timeHelper.days(1));
+        await expect(multiVesting.vestedAmount(id)).to.be.eventually.be.a.bignumber.equals(ZERO);
+      }
+
+      await advance.timeAndBlock(timeHelper.days(1));
+      await expect(multiVesting.vestedAmount(id)).to.be.eventually.be.a.bignumber.equals(ONE);
+
+      await advance.timeAndBlock(timeHelper.days(4));
+      await expect(multiVesting.vestedAmount(id)).to.be.eventually.be.a.bignumber.equals(new BN(5));
+
+      await expect(multiVesting.release(id, fromUser)).to.be.fulfilled;
+      await expect(multiVesting.vestedAmount(id)).to.be.eventually.be.a.bignumber.equals(new BN(5));
+
+      await advance.timeAndBlock(timeHelper.days(4));
+      await expect(multiVesting.vestedAmount(id)).to.be.eventually.be.a.bignumber.equals(new BN(9));
+
+      for (let index = 0; index < 2; ++index) {
+        await advance.timeAndBlock(timeHelper.days(1));
+        await expect(multiVesting.vestedAmount(id)).to.be.eventually.be.a.bignumber.equals(new BN(10));
+      }
+
+      await expect(multiVesting.release(id, fromUser)).to.be.fulfilled;
+      await expect(multiVesting.vestedAmount(id)).to.be.eventually.be.a.bignumber.equals(new BN(10));
+
+      await advance.timeAndBlock(timeHelper.days(1));
+      await expect(multiVesting.vestedAmount(id)).to.be.eventually.be.a.bignumber.equals(new BN(10));
+    });
+
+    describe("revoked", () => {
+      it("before start", async () => {
+        const id = ZERO;
+
+        await expect(crunch.transfer(multiVesting.address, TEN)).to.be.fulfilled;
+        await expect(multiVesting.vest(user, TEN, timeHelper.days(2), timeHelper.days(10), true)).to.be.fulfilled;
+
+        await expect(multiVesting.revoke(id)).to.be.fulfilled;
+
+        await expect(multiVesting.beginNow()).to.be.fulfilled;
+
+        await advance.timeAndBlock(timeHelper.days(10));
+        await expect(multiVesting.vestedAmount(id)).to.be.eventually.be.a.bignumber.equals(ZERO);
+      });
+
+      it("before cliff", async () => {
+        const id = ZERO;
+
+        await expect(crunch.transfer(multiVesting.address, TEN)).to.be.fulfilled;
+        await expect(multiVesting.vest(user, TEN, timeHelper.days(2), timeHelper.days(10), true)).to.be.fulfilled;
+
+        await expect(multiVesting.beginNow()).to.be.fulfilled;
+
+        await advance.timeAndBlock(timeHelper.days(1));
+
+        await expect(multiVesting.revoke(id)).to.be.fulfilled;
+
+        await advance.timeAndBlock(timeHelper.days(10));
+        await expect(multiVesting.vestedAmount(id)).to.be.eventually.be.a.bignumber.equals(ZERO);
+      });
+
+      it("mid", async () => {
+        const id = ZERO;
+
+        await expect(crunch.transfer(multiVesting.address, TEN)).to.be.fulfilled;
+        await expect(multiVesting.vest(user, TEN, timeHelper.days(2), timeHelper.days(10), true)).to.be.fulfilled;
+
+        await expect(multiVesting.beginNow()).to.be.fulfilled;
+
+        await advance.timeAndBlock(timeHelper.days(2 + 5));
+
+        await expect(multiVesting.revoke(id)).to.be.fulfilled;
+
+        await advance.timeAndBlock(timeHelper.days(10));
+        await expect(multiVesting.vestedAmount(id)).to.be.eventually.be.a.bignumber.equals(new BN(5));
+
+        await expect(multiVesting.release(id, fromUser)).to.be.fulfilled;
+        await expect(multiVesting.vestedAmount(id)).to.be.eventually.be.a.bignumber.equals(new BN(5));
+      });
     });
   });
 });
