@@ -190,8 +190,16 @@ contract CrunchMultiVestingV2 is HasERC677TokenParent {
         return _release(_getVesting(vestingId, _msgSender()));
     }
 
+    function releaseAll() external returns (uint256) {
+        return _releaseAll(_msgSender());
+    }
+
     function releaseFor(uint256 vestingId) external onlyOwner returns (uint256) {
         return _release(_getVesting(vestingId));
+    }
+
+    function releaseAllFor(address beneficiary) external onlyOwner returns (uint256) {
+        return _releaseAll(beneficiary);
     }
 
     function revoke(uint256 vestingId) public onlyOwner returns (uint256) {
@@ -228,17 +236,27 @@ contract CrunchMultiVestingV2 is HasERC677TokenParent {
         return owned[beneficiary].length;
     }
 
-    // /**
-    //  * @notice Get the remaining amount of token of a beneficiary.
-    //  * @dev This function is to make wallets able to display the amount in their UI.
-    //  * @param beneficiary Address to check.
-    //  * @return The remaining amount of tokens.
-    //  */
-    // function balanceOf(address beneficiary) external view returns (uint256) {
-    //     Vesting storage vesting = _getVesting(beneficiary);
+    /**
+     * @notice Get the remaining amount of token of a beneficiary.
+     * @dev This function is to make wallets able to display the amount in their UI.
+     * @param beneficiary Address to check.
+     * @return balance The remaining amount of tokens.
+     */
+    function balanceOf(address beneficiary) external view returns (uint256 balance) {
+        uint256[] storage indexes = owned[beneficiary];
 
-    //     return vesting.amount - vesting.released;
-    // }
+        for (uint256 index = 0; index < indexes.length; ++index) {
+            uint256 vestingId = indexes[index];
+
+            balance += balanceOf(vestingId);
+        }
+    }
+
+    function balanceOf(uint256 vestingId) public view returns (uint256) {
+        Vesting storage vesting = _getVesting(vestingId);
+        
+        return vesting.amount - vesting.released;
+    }
 
     function _transfer(Vesting storage vesting, address to) internal {
         address from = vesting.beneficiary;
@@ -262,15 +280,38 @@ contract CrunchMultiVestingV2 is HasERC677TokenParent {
      * @param vesting Vesting to release.
      */
     function _release(Vesting storage vesting) internal returns (uint256 unreleased) {
+        unreleased = _doRelease(vesting);
+        _checkAmount(unreleased);
+    }
+
+    function _releaseAll(address beneficiary) internal returns (uint256 unreleased) {
+        uint256[] storage indexes = owned[beneficiary];
+
+        for (uint256 index = 0; index < indexes.length; ++index) {
+            uint256 vestingId = indexes[index];
+            Vesting storage vesting = vestings[vestingId];
+
+            unreleased += _doRelease(vesting);
+        }
+        
+        _checkAmount(unreleased);
+    }
+
+    function _doRelease(Vesting storage vesting) internal returns (uint256 unreleased) {
         unreleased = _releasableAmount(vesting);
+
+        if (unreleased != 0) {
+            parentToken.transfer(vesting.beneficiary, unreleased);
+
+            vesting.released += unreleased;
+            totalSupply -= unreleased;
+
+            emit TokensReleased(vesting.id, vesting.beneficiary, unreleased);
+        }
+    }
+
+    function _checkAmount(uint256 unreleased) internal pure {
         require(unreleased > 0, "MultiVesting: no tokens are due");
-
-        parentToken.transfer(vesting.beneficiary, unreleased);
-
-        vesting.released += unreleased;
-        totalSupply -= unreleased;
-
-        emit TokensReleased(vesting.id, vesting.beneficiary, unreleased);
     }
 
     function _revoke(Vesting storage vesting) internal returns (uint256 refund) {
