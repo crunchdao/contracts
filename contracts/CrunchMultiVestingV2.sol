@@ -202,6 +202,10 @@ contract CrunchMultiVestingV2 is HasERC677TokenParent {
         return _isBeneficiary(_getVesting(vestingId), account);
     }
 
+    function isVested(address beneficiary) public view returns (bool) {
+        return ownedCount(beneficiary) != 0;
+    }
+
     /**
      * @notice Get the releasable amount of tokens.
      * @param vestingId Vesting ID to check.
