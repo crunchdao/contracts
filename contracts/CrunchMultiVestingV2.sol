@@ -338,7 +338,7 @@ contract CrunchMultiVestingV2 is HasERC677TokenParent {
         require(!vesting.revoked, "MultiVesting: token already revoked");
 
         uint256 unreleased = _releasableAmount(vesting);
-        refund = vesting.amount - unreleased;
+        refund = vesting.amount - vesting.released - unreleased;
 
         vesting.revoked = true;
 
