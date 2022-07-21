@@ -2,6 +2,7 @@
 
 const chai = require("chai");
 chai.config.truncateThreshold = 0;
+chai.config.includeStack = true;
 
 const BN = web3.utils.BN;
 const chaiBN = require("chai-bn")(BN);
