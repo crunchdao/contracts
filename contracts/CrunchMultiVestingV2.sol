@@ -14,7 +14,9 @@ contract CrunchMultiVestingV2 is HasERC677TokenParent {
     using Counters for Counters.Counter;
 
     // prettier-ignore
-    event VestingBegin();
+    event VestingBegin(
+        uint256 startDate
+    );
 
     // prettier-ignore
     event TokensReleased(
@@ -125,10 +127,21 @@ contract CrunchMultiVestingV2 is HasERC677TokenParent {
         return reserve() - totalSupply;
     }
 
-    function begin() external onlyOwner onlyWhenNotStarted {
-        startDate = block.timestamp;
+    /**
+     * @notice Begin the vesting of everyone at the current block timestamp.
+     */
+    function beginNow() external onlyOwner {
+        _begin(block.timestamp);
+    }
 
-        emit VestingBegin();
+    /**
+     * @notice Begin the vesting of everyone at a specified timestamp.
+     * @param timestamp Timestamp to use as a begin date.
+     */
+    function beginAt(uint256 timestamp) external onlyOwner {
+        require(timestamp != 0, "MultiVesting: timestamp cannot be zero");
+
+        _begin(timestamp);
     }
 
     /**
@@ -254,8 +267,14 @@ contract CrunchMultiVestingV2 is HasERC677TokenParent {
 
     function balanceOf(uint256 vestingId) public view returns (uint256) {
         Vesting storage vesting = _getVesting(vestingId);
-        
+
         return vesting.amount - vesting.released;
+    }
+
+    function _begin(uint256 timestamp) internal onlyWhenNotStarted {
+        startDate = timestamp;
+
+        emit VestingBegin(startDate);
     }
 
     function _transfer(Vesting storage vesting, address to) internal {
@@ -293,7 +312,7 @@ contract CrunchMultiVestingV2 is HasERC677TokenParent {
 
             unreleased += _doRelease(vesting);
         }
-        
+
         _checkAmount(unreleased);
     }
 
