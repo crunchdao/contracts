@@ -318,4 +318,18 @@ contract("Crunch Multi Vesting V2", async ([owner, user, ...accounts]) => {
       await expect(crunch.balanceOf(user)).to.eventually.be.a.bignumber.equal(half);
     });
   });
+
+  describe("isBeneficiary(uint256, address)", () => {
+    it("not existing", async () => {
+      await expect(multiVesting.isBeneficiary(ZERO, owner)).to.be.rejectedWith(Error, "MultiVesting: vesting does not exists");
+    });
+    
+    it("ok", async () => {
+      await expect(crunch.transfer(multiVesting.address, ONE)).to.be.fulfilled;
+      await expect(multiVesting.vest(user, ONE, ONE, ONE, true)).to.be.fulfilled;
+
+      await expect(multiVesting.isBeneficiary(ZERO, owner)).to.be.eventually.false
+      await expect(multiVesting.isBeneficiary(ZERO, user)).to.be.eventually.true
+    });
+  });
 });
