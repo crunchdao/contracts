@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "@bdaenen/uwebsockets": "^19.5.0",
-    "@openzeppelin/contracts": "=4.7.0",
+    "@openzeppelin/contracts": "=4.7.1",
     "@truffle/hdwallet-provider": "^2.0.10",
     "chai": "^4.3.6",
     "chai-as-promised": "^7.1.1",
