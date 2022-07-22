@@ -13,6 +13,9 @@ import "@openzeppelin/contracts/utils/Counters.sol";
 contract CrunchMultiVestingV2 is HasERC677TokenParent {
     using Counters for Counters.Counter;
 
+    /// see IERC20.Transfer
+    event Transfer(address indexed from, address indexed to, uint256 value);
+
     // prettier-ignore
     event VestingBegin(
         uint256 startDate
@@ -259,8 +262,10 @@ contract CrunchMultiVestingV2 is HasERC677TokenParent {
     }
 
     function balanceOfVesting(uint256 vestingId) public view returns (uint256) {
-        Vesting storage vesting = _getVesting(vestingId);
+        return _balanceOfVesting(_getVesting(vestingId));
+    }
 
+    function _balanceOfVesting(Vesting storage vesting) internal view returns (uint256) {
         return vesting.amount - vesting.released;
     }
 
@@ -305,6 +310,7 @@ contract CrunchMultiVestingV2 is HasERC677TokenParent {
         totalSupply += amount;
 
         emit VestingCreated(vestingId, beneficiary, amount, cliffDuration, duration, revocable);
+        emit Transfer(address(0), beneficiary, amount);
     }
 
     function _transfer(Vesting storage vesting, address to) internal {
@@ -319,6 +325,7 @@ contract CrunchMultiVestingV2 is HasERC677TokenParent {
         vesting.beneficiary = to;
 
         emit VestingTransfered(vesting.id, from, to);
+        emit Transfer(from, to, _balanceOfVesting(vesting));
     }
 
     /**
@@ -356,6 +363,7 @@ contract CrunchMultiVestingV2 is HasERC677TokenParent {
             totalSupply -= unreleased;
 
             emit TokensReleased(vesting.id, vesting.beneficiary, unreleased);
+            emit Transfer(vesting.beneficiary, address(0), unreleased);
         }
     }
 
@@ -376,6 +384,7 @@ contract CrunchMultiVestingV2 is HasERC677TokenParent {
         vesting.amount -= refund;
 
         emit VestingRevoked(vesting.id, vesting.beneficiary, refund);
+        emit Transfer(vesting.beneficiary, address(0), refund);
     }
 
     function _isBeneficiary(Vesting storage vesting, address account) internal view returns (bool) {
