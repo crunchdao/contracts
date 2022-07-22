@@ -3,7 +3,6 @@ pragma solidity ^0.8.2;
 
 import "./access/HasERC677TokenParent.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import "@openzeppelin/contracts/utils/Counters.sol";
 
 /**
  * @title Crunch Multi Vesting V2
@@ -11,8 +10,6 @@ import "@openzeppelin/contracts/utils/Counters.sol";
  * @notice Allow the vesting of multiple users using only one contract.
  */
 contract CrunchMultiVestingV2 is HasERC677TokenParent {
-    using Counters for Counters.Counter;
-
     /// see IERC20.Transfer
     event Transfer(address indexed from, address indexed to, uint256 value);
 
@@ -82,7 +79,8 @@ contract CrunchMultiVestingV2 is HasERC677TokenParent {
     /** mapping to list of address's owning vesting id */
     mapping(address => uint256[]) public owned;
 
-    Counters.Counter private _idCounter;
+    /** always incrementing value to generate the next vesting id */
+    uint256 _idCounter;
 
     /**
      * @notice Instanciate a new contract.
@@ -397,7 +395,7 @@ contract CrunchMultiVestingV2 is HasERC677TokenParent {
         require(amount > 0, "MultiVesting: amount is 0");
         require(availableReserve() >= amount, "MultiVesting: available reserve is not enough");
 
-        uint256 vestingId = _nextId();
+        uint256 vestingId = _idCounter++ /* post-increment */;
 
         // prettier-ignore
         vestings[vestingId] = Vesting({
@@ -565,11 +563,6 @@ contract CrunchMultiVestingV2 is HasERC677TokenParent {
     function _getVesting(uint256 vestingId, address beneficiary) internal view returns (Vesting storage vesting) {
         vesting = _getVesting(vestingId);
         require(vesting.beneficiary == beneficiary, "MultiVesting: not the beneficiary");
-    }
-
-    function _nextId() internal returns (uint256 id) {
-        id = _idCounter.current();
-        _idCounter.increment();
     }
 
     /**
