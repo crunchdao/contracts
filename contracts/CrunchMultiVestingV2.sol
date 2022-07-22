@@ -175,6 +175,23 @@ contract CrunchMultiVestingV2 is HasERC677TokenParent {
         _vest(beneficiary, amount, cliffDuration, duration, revocable);
     }
 
+    /**
+     * @notice Create multiple vesting at once.
+     *
+     * Requirements:
+     * - caller must be the owner
+     * - `amounts` must not countains a zero values
+     * - `beneficiaries` must not contains null addresses
+     * - `cliffDuration` must be less than the duration
+     * - `duration` must not be zero
+     * - there must be enough available reserve to accept the amount
+     *
+     * @dev A `VestingCreated` event will be emitted.
+     * @param beneficiaries Addresses that will receive CRUNCH tokens.
+     * @param amounts Amounts of CRUNCH to vest.
+     * @param cliffDuration Cliff duration in seconds.
+     * @param duration Vesting duration in seconds.
+     */
     function vestMultiple(
         address[] calldata beneficiaries,
         uint256[] calldata amounts,
@@ -191,34 +208,97 @@ contract CrunchMultiVestingV2 is HasERC677TokenParent {
         }
     }
 
+    /**
+     * @notice Transfer a vesting to another person.
+     * @dev A `VestingTransfered` event will be emitted.
+     * @param to Receiving address.
+     * @param vestingId Vesting ID to transfer.
+     */
     function transfer(address to, uint256 vestingId) external {
         _transfer(_getVesting(vestingId, _msgSender()), to);
     }
 
+    /**
+     * @notice Release the tokens of a specified vesting.
+     *
+     * Requirements:
+     * - the vesting must exists
+     * - the caller must be the vesting's beneficiary
+     * - at least one token must be released
+     *
+     * @dev A `TokensReleased` event will be emitted.
+     * @param vestingId Vesting ID to release.
+     */
     function release(uint256 vestingId) external returns (uint256) {
         return _release(_getVesting(vestingId, _msgSender()));
     }
 
+    /**
+     * @notice Release the tokens of a all of sender's vesting.
+     *
+     * Requirements:
+     * - at least one token must be released
+     *
+     * @dev `TokensReleased` events will be emitted.
+     */
     function releaseAll() external returns (uint256) {
         return _releaseAll(_msgSender());
     }
 
+    /**
+     * @notice Release the tokens of a specified vesting.
+     *
+     * Requirements:
+     * - caller must be the owner
+     * - the vesting must exists
+     * - at least one token must be released
+     *
+     * @dev A `TokensReleased` event will be emitted.
+     * @param vestingId Vesting ID to release.
+     */
     function releaseFor(uint256 vestingId) external onlyOwner returns (uint256) {
         return _release(_getVesting(vestingId));
     }
 
+    /**
+     * @notice Release the tokens of a all of beneficiary's vesting.
+     *
+     * Requirements:
+     * - caller must be the owner
+     * - at least one token must be released
+     *
+     * @dev `TokensReleased` events will be emitted.
+     */
     function releaseAllFor(address beneficiary) external onlyOwner returns (uint256) {
         return _releaseAll(beneficiary);
     }
 
+    /**
+     * @notice Revoke a vesting.
+     *
+     * Requirements:
+     * - caller must be the owner
+     * - the vesting must be revocable
+     * - the vesting must be not be already revoked
+     *
+     * @dev `VestingRevoked` events will be emitted.
+     */
     function revoke(uint256 vestingId) public onlyOwner returns (uint256) {
         return _revoke(_getVesting(vestingId));
     }
 
+    /**
+     * @notice Test if an address is the beneficiary of a vesting.
+     * @return `true` if the address is the beneficiary of the vesting, `false` otherwise.
+     */
     function isBeneficiary(uint256 vestingId, address account) public view returns (bool) {
         return _isBeneficiary(_getVesting(vestingId), account);
     }
 
+    /**
+     * @notice Test if an address has at least one vesting.
+     * @return `true` if the address has one or more vesting.
+     */
     function isVested(address beneficiary) public view returns (bool) {
         return ownedCount(beneficiary) != 0;
     }
@@ -241,6 +321,11 @@ contract CrunchMultiVestingV2 is HasERC677TokenParent {
         return _vestedAmount(_getVesting(vestingId));
     }
 
+    /**
+     * @notice Get the number of vesting for an address.
+     * @param beneficiary Address to check.
+     * @return The amount of vesting for the address.
+     */
     function ownedCount(address beneficiary) public view returns (uint256) {
         return owned[beneficiary].length;
     }
@@ -261,25 +346,46 @@ contract CrunchMultiVestingV2 is HasERC677TokenParent {
         }
     }
 
+    /**
+     * @notice Get the remaining amount of token of a specified vesting.
+     * @param vestingId Vesting ID to check.
+     * @return The remaining amount of tokens.
+     */
     function balanceOfVesting(uint256 vestingId) public view returns (uint256) {
         return _balanceOfVesting(_getVesting(vestingId));
     }
 
+    /**
+     * @notice Get the remaining amount of token of a specified vesting.
+     * @param vesting Vesting to check.
+     * @return The remaining amount of tokens.
+     */
     function _balanceOfVesting(Vesting storage vesting) internal view returns (uint256) {
         return vesting.amount - vesting.released;
     }
 
+    /**
+     * @notice Begin the vesting for everyone.
+     * @param timestamp Timestamp to use for the start date.
+     * @dev A `VestingBegin` event will be emitted.
+     */
     function _begin(uint256 timestamp) internal onlyWhenNotStarted {
         startDate = timestamp;
 
         emit VestingBegin(startDate);
     }
 
+    /**
+     * @notice Check the shared inputs of a vest method.
+     */
     function _requireVestInputs(uint256 cliffDuration, uint256 duration) internal pure {
         require(cliffDuration <= duration, "MultiVesting: cliff is longer than duration");
         require(duration > 0, "MultiVesting: duration is 0");
     }
 
+    /**
+     * @notice Create a vesting.
+     */
     function _vest(
         address beneficiary,
         uint256 amount,
@@ -313,6 +419,9 @@ contract CrunchMultiVestingV2 is HasERC677TokenParent {
         emit Transfer(address(0), beneficiary, amount);
     }
 
+    /**
+     * @notice Transfer a vesting to another address.
+     */
     function _transfer(Vesting storage vesting, address to) internal {
         address from = vesting.beneficiary;
 
@@ -332,7 +441,6 @@ contract CrunchMultiVestingV2 is HasERC677TokenParent {
      * @dev Internal implementation of the release() method.
      * @dev The methods will fail if there is no tokens due.
      * @dev A `TokensReleased` event will be emitted.
-     * @dev If the vesting's released tokens is the same of the vesting's amount, the vesting is considered as finished, and will be removed from the active list.
      * @param vesting Vesting to release.
      */
     function _release(Vesting storage vesting) internal returns (uint256 unreleased) {
@@ -340,6 +448,12 @@ contract CrunchMultiVestingV2 is HasERC677TokenParent {
         _checkAmount(unreleased);
     }
 
+    /**
+     * @dev Internal implementation of the releaseAll() method.
+     * @dev The methods will fail if there is no tokens due.
+     * @dev `TokensReleased` events will be emitted.
+     * @param beneficiary Address to release all vesting from.
+     */
     function _releaseAll(address beneficiary) internal returns (uint256 unreleased) {
         uint256[] storage indexes = owned[beneficiary];
 
@@ -353,6 +467,10 @@ contract CrunchMultiVestingV2 is HasERC677TokenParent {
         _checkAmount(unreleased);
     }
 
+    /**
+     * @dev Actually releasing the vestiong.
+     * @dev This method will not fail. (aside from a lack of reserve, which should never happen!)
+     */
     function _doRelease(Vesting storage vesting) internal returns (uint256 unreleased) {
         unreleased = _releasableAmount(vesting);
 
@@ -367,10 +485,16 @@ contract CrunchMultiVestingV2 is HasERC677TokenParent {
         }
     }
 
+    /**
+     * @dev Revert the transaction if the value is zero.
+     */
     function _checkAmount(uint256 unreleased) internal pure {
         require(unreleased > 0, "MultiVesting: no tokens are due");
     }
 
+    /**
+     * @dev Revoke a vesting and send the extra CRUNCH back to the owner.
+     */
     function _revoke(Vesting storage vesting) internal returns (uint256 refund) {
         require(vesting.revocable, "MultiVesting: token not revocable");
         require(!vesting.revoked, "MultiVesting: token already revoked");
@@ -387,6 +511,9 @@ contract CrunchMultiVestingV2 is HasERC677TokenParent {
         emit Transfer(vesting.beneficiary, address(0), refund);
     }
 
+    /**
+     * @dev Test if the vesting's beneficiary is the same as the specified address.
+     */
     function _isBeneficiary(Vesting storage vesting, address account) internal view returns (bool) {
         return vesting.beneficiary == account;
     }
@@ -445,16 +572,9 @@ contract CrunchMultiVestingV2 is HasERC677TokenParent {
         _idCounter.increment();
     }
 
-    function _indexOf(uint256[] storage array, uint256 value) internal view returns (bool, uint256) {
-        for (uint256 index = 0; index < array.length; ++index) {
-            if (array[index] == value) {
-                return (true, index);
-            }
-        }
-
-        return (false, 0);
-    }
-
+    /**
+     * @dev Remove the vesting from the ownership mapping.
+     */
     function _removeOwnership(address account, uint256 vestingId) internal returns (bool) {
         uint256[] storage indexes = owned[account];
 
@@ -473,10 +593,32 @@ contract CrunchMultiVestingV2 is HasERC677TokenParent {
         return true;
     }
 
+    /**
+     * @dev Add the vesting ID to the ownership mapping.
+     */
     function _addOwnership(address account, uint256 vestingId) internal {
         owned[account].push(vestingId);
     }
 
+    /**
+     * @dev Find the index of a value in an array.
+     * @param array Haystack.
+     * @param value Needle.
+     * @return If the first value is `true`, that mean that the needle has been found and the index is stored in the second value. Else if `false`, the value isn't in the array and the second value should be discarded.
+     */
+    function _indexOf(uint256[] storage array, uint256 value) internal view returns (bool, uint256) {
+        for (uint256 index = 0; index < array.length; ++index) {
+            if (array[index] == value) {
+                return (true, index);
+            }
+        }
+
+        return (false, 0);
+    }
+
+    /**
+     * @dev Revert if the start date is not zero.
+     */
     modifier onlyWhenNotStarted() {
         require(startDate == 0, "MultiVesting: already started");
         _;
