@@ -361,7 +361,7 @@ contract("Crunch Multi Vesting V2", async ([owner, user, ...accounts]) => {
 
       await expect(multiVesting.vest(user, ONE, ONE, ONE, false)).to.be.fulfilled;
 
-      await expect(multiVesting.revoke(ZERO)).to.be.rejectedWith(Error, "MultiVesting: token not revocable");
+      await expect(multiVesting.revoke(ZERO, false)).to.be.rejectedWith(Error, "MultiVesting: token not revocable");
     });
 
     it("already revoked", async () => {
@@ -369,9 +369,9 @@ contract("Crunch Multi Vesting V2", async ([owner, user, ...accounts]) => {
 
       await expect(multiVesting.vest(user, ONE, ONE, ONE, true)).to.be.fulfilled;
 
-      await expect(multiVesting.revoke(ZERO)).to.be.fulfilled;
+      await expect(multiVesting.revoke(ZERO, false)).to.be.fulfilled;
 
-      await expect(multiVesting.revoke(ZERO)).to.be.rejectedWith(Error, "MultiVesting: token already revoked");
+      await expect(multiVesting.revoke(ZERO, false)).to.be.rejectedWith(Error, "MultiVesting: token already revoked");
     });
 
     it("before cliff", async () => {
@@ -381,7 +381,7 @@ contract("Crunch Multi Vesting V2", async ([owner, user, ...accounts]) => {
 
       await expect(multiVesting.beginNow()).to.be.fulfilled;
 
-      await expect(multiVesting.revoke(ZERO)).to.be.fulfilled;
+      await expect(multiVesting.revoke(ZERO, false)).to.be.fulfilled;
 
       await advance.timeAndBlock(TWO_YEAR);
 
@@ -405,7 +405,7 @@ contract("Crunch Multi Vesting V2", async ([owner, user, ...accounts]) => {
       await advance.timeAndBlock(ONE_YEAR);
       await expect(multiVesting.releasableAmount(ZERO)).to.eventually.be.a.bignumber.equal(half);
 
-      await expect(multiVesting.revoke(ZERO)).to.be.fulfilled;
+      await expect(multiVesting.revoke(ZERO, false)).to.be.fulfilled;
 
       await expect(multiVesting.totalSupply()).to.eventually.be.a.bignumber.equal(half);
 
@@ -511,7 +511,7 @@ contract("Crunch Multi Vesting V2", async ([owner, user, ...accounts]) => {
         await expect(crunch.transfer(multiVesting.address, TEN)).to.be.fulfilled;
         await expect(multiVesting.vest(user, TEN, timeHelper.days(2), timeHelper.days(10), true)).to.be.fulfilled;
 
-        await expect(multiVesting.revoke(id)).to.be.fulfilled;
+        await expect(multiVesting.revoke(id, false)).to.be.fulfilled;
 
         await expect(multiVesting.beginNow()).to.be.fulfilled;
 
@@ -529,7 +529,7 @@ contract("Crunch Multi Vesting V2", async ([owner, user, ...accounts]) => {
 
         await advance.timeAndBlock(timeHelper.days(1));
 
-        await expect(multiVesting.revoke(id)).to.be.fulfilled;
+        await expect(multiVesting.revoke(id, false)).to.be.fulfilled;
 
         await advance.timeAndBlock(timeHelper.days(10));
         await expect(multiVesting.releasableAmount(id)).to.be.eventually.be.a.bignumber.equals(ZERO);
@@ -545,7 +545,7 @@ contract("Crunch Multi Vesting V2", async ([owner, user, ...accounts]) => {
 
         await advance.timeAndBlock(timeHelper.days(2 + 5));
 
-        await expect(multiVesting.revoke(id)).to.be.fulfilled;
+        await expect(multiVesting.revoke(id, false)).to.be.fulfilled;
 
         await advance.timeAndBlock(timeHelper.days(10));
         await expect(multiVesting.releasableAmount(id)).to.be.eventually.be.a.bignumber.equals(new BN(5));
@@ -613,7 +613,7 @@ contract("Crunch Multi Vesting V2", async ([owner, user, ...accounts]) => {
         await expect(crunch.transfer(multiVesting.address, TEN)).to.be.fulfilled;
         await expect(multiVesting.vest(user, TEN, timeHelper.days(2), timeHelper.days(10), true)).to.be.fulfilled;
 
-        await expect(multiVesting.revoke(id)).to.be.fulfilled;
+        await expect(multiVesting.revoke(id, false)).to.be.fulfilled;
 
         await expect(multiVesting.beginNow()).to.be.fulfilled;
 
@@ -631,7 +631,7 @@ contract("Crunch Multi Vesting V2", async ([owner, user, ...accounts]) => {
 
         await advance.timeAndBlock(timeHelper.days(1));
 
-        await expect(multiVesting.revoke(id)).to.be.fulfilled;
+        await expect(multiVesting.revoke(id, false)).to.be.fulfilled;
 
         await advance.timeAndBlock(timeHelper.days(10));
         await expect(multiVesting.vestedAmount(id)).to.be.eventually.be.a.bignumber.equals(ZERO);
@@ -647,13 +647,38 @@ contract("Crunch Multi Vesting V2", async ([owner, user, ...accounts]) => {
 
         await advance.timeAndBlock(timeHelper.days(2 + 5));
 
-        await expect(multiVesting.revoke(id)).to.be.fulfilled;
+        await expect(multiVesting.revoke(id, false)).to.be.fulfilled;
 
         await advance.timeAndBlock(timeHelper.days(10));
         await expect(multiVesting.vestedAmount(id)).to.be.eventually.be.a.bignumber.equals(new BN(5));
 
         await expect(multiVesting.release(id, fromUser)).to.be.fulfilled;
         await expect(multiVesting.vestedAmount(id)).to.be.eventually.be.a.bignumber.equals(new BN(5));
+      });
+    });
+    describe("sendBack", () => {
+      it("true", async () => {
+        const id = ZERO;
+
+        await expect(crunch.transfer(multiVesting.address, ONE)).to.be.fulfilled;
+        await expect(multiVesting.vest(user, ONE, ONE, ONE, true)).to.be.fulfilled;
+
+        await expect(multiVesting.revoke(id, true)).to.be.fulfilled;
+
+        await expect(crunch.balanceOf(multiVesting.address)).to.be.eventually.be.a.bignumber.equals(ZERO);
+        await expect(crunch.balanceOf(owner)).to.be.eventually.be.a.bignumber.equals(await crunch.totalSupply());
+      });
+
+      it("false", async () => {
+        const id = ZERO;
+
+        await expect(crunch.transfer(multiVesting.address, ONE)).to.be.fulfilled;
+        await expect(multiVesting.vest(user, ONE, ONE, ONE, true)).to.be.fulfilled;
+
+        await expect(multiVesting.revoke(id, false)).to.be.fulfilled;
+
+        await expect(crunch.balanceOf(multiVesting.address)).to.be.eventually.be.a.bignumber.equals(ONE);
+        await expect(crunch.balanceOf(owner)).to.be.eventually.be.a.bignumber.equals((await crunch.totalSupply()).sub(ONE));
       });
     });
   });
@@ -717,7 +742,7 @@ contract("Crunch Multi Vesting V2", async ([owner, user, ...accounts]) => {
     await expect(multiVesting.release(ONE, fromUser)).to.be.fulfilled;
     await expect(multiVesting.balanceOf(user)).to.be.eventually.a.bignumber.equals(new BN(3 + 5 + 10));
 
-    await expect(multiVesting.revoke(ZERO)).to.be.fulfilled;
+    await expect(multiVesting.revoke(ZERO, false)).to.be.fulfilled;
     await expect(multiVesting.balanceOf(user)).to.be.eventually.a.bignumber.equals(new BN(0 + 5 + 10));
 
     await advance.timeAndBlock(timeHelper.days(5));
@@ -768,7 +793,7 @@ contract("Crunch Multi Vesting V2", async ([owner, user, ...accounts]) => {
       await advance.timeAndBlock(timeHelper.days(2 + 5));
       await expect(multiVesting.balanceOfVesting(id)).to.be.eventually.a.bignumber.equals(TEN);
 
-      await expect(multiVesting.revoke(id)).to.be.fulfilled;
+      await expect(multiVesting.revoke(id, false)).to.be.fulfilled;
       await expect(multiVesting.balanceOfVesting(id)).to.be.eventually.a.bignumber.equals(new BN(5));
 
       await expect(multiVesting.release(id, fromUser)).to.be.fulfilled;

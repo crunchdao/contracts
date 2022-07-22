@@ -279,9 +279,11 @@ contract CrunchMultiVestingV2 is HasERC677TokenParent {
      * - the vesting must be not be already revoked
      *
      * @dev `VestingRevoked` events will be emitted.
+     * @param vestingId Vesting ID to revoke.
+     * @param sendBack Should the revoked tokens stay in the contract or be sent back to the owner?
      */
-    function revoke(uint256 vestingId) public onlyOwner returns (uint256) {
-        return _revoke(_getVesting(vestingId));
+    function revoke(uint256 vestingId, bool sendBack) public onlyOwner returns (uint256) {
+        return _revoke(_getVesting(vestingId), sendBack);
     }
 
     /**
@@ -492,7 +494,7 @@ contract CrunchMultiVestingV2 is HasERC677TokenParent {
     /**
      * @dev Revoke a vesting and send the extra CRUNCH back to the owner.
      */
-    function _revoke(Vesting storage vesting) internal returns (uint256 refund) {
+    function _revoke(Vesting storage vesting, bool sendBack) internal returns (uint256 refund) {
         require(vesting.revocable, "MultiVesting: token not revocable");
         require(!vesting.revoked, "MultiVesting: token already revoked");
 
@@ -500,10 +502,12 @@ contract CrunchMultiVestingV2 is HasERC677TokenParent {
         refund = vesting.amount - vesting.released - unreleased;
 
         vesting.revoked = true;
-
-        parentToken.transfer(owner(), refund);
         vesting.amount -= refund;
         totalSupply -= refund;
+
+        if (sendBack) {
+            parentToken.transfer(owner(), refund);
+        }
 
         emit VestingRevoked(vesting.id, vesting.beneficiary, refund);
         emit Transfer(vesting.beneficiary, address(0), refund);
