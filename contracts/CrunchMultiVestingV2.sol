@@ -355,6 +355,16 @@ contract CrunchMultiVestingV2 is HasERC677TokenParent {
     }
 
     /**
+     * @notice Send the available token back to the owner.
+     */
+    function emptyAvailableReserve() external onlyOwner {
+        uint256 available = availableReserve();
+        require(available > 0, "MultiVesting: no token available");
+
+        parentToken.transfer(owner(), available);
+    }
+
+    /**
      * @notice Get the remaining amount of token of a specified vesting.
      * @param vesting Vesting to check.
      * @return The remaining amount of tokens.
@@ -396,7 +406,7 @@ contract CrunchMultiVestingV2 is HasERC677TokenParent {
         require(amount > 0, "MultiVesting: amount is 0");
         require(availableReserve() >= amount, "MultiVesting: available reserve is not enough");
 
-        uint256 vestingId = _idCounter++ /* post-increment */;
+        uint256 vestingId = _idCounter++; /* post-increment */
 
         // prettier-ignore
         vestings[vestingId] = Vesting({

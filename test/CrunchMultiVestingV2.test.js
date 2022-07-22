@@ -803,4 +803,27 @@ contract("Crunch Multi Vesting V2", async ([owner, user, ...accounts]) => {
       await expect(multiVesting.balanceOfVesting(id)).to.be.eventually.a.bignumber.equals(ZERO);
     });
   });
+
+  describe("emptyAvailableReserve()", () => {
+    it("no reserve", async () => {
+      await expect(multiVesting.emptyAvailableReserve()).to.be.rejectedWith(Error, "MultiVesting: no token available");
+    });
+
+    it("no available reserve", async () => {
+      await expect(crunch.transfer(multiVesting.address, ONE)).to.be.fulfilled;
+      await expect(multiVesting.vest(user, ONE, ONE, ONE, true)).to.be.fulfilled;
+
+      await expect(multiVesting.emptyAvailableReserve()).to.be.rejectedWith(Error, "MultiVesting: no token available");
+    });
+
+    it("ok", async () => {
+      await expect(crunch.transfer(multiVesting.address, TWO)).to.be.fulfilled;
+      await expect(multiVesting.vest(user, ONE, ONE, ONE, true)).to.be.fulfilled;
+
+      await expect(multiVesting.emptyAvailableReserve()).to.be.fulfilled;
+
+      await expect(crunch.balanceOf(multiVesting.address)).to.be.eventually.a.bignumber.equals(ONE);
+      await expect(crunch.balanceOf(owner)).to.be.eventually.a.bignumber.equals((await crunch.totalSupply()).sub(ONE));
+    });
+  });
 });
