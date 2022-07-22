@@ -168,31 +168,24 @@ contract CrunchMultiVestingV2 is HasERC677TokenParent {
         uint256 duration,
         bool revocable
     ) external onlyOwner onlyWhenNotStarted {
-        require(beneficiary != address(0), "MultiVesting: beneficiary is the zero address");
-        require(amount > 0, "MultiVesting: amount is 0");
-        require(duration > 0, "MultiVesting: duration is 0");
-        require(cliffDuration <= duration, "MultiVesting: cliff is longer than duration");
-        require(availableReserve() >= amount, "MultiVesting: available reserve is not enough");
+        _requireVestInputs(cliffDuration, duration);
+        _vest(beneficiary, amount, cliffDuration, duration, revocable);
+    }
 
-        uint256 vestingId = _nextId();
+    function vestMultiple(
+        address[] calldata beneficiaries,
+        uint256[] calldata amounts,
+        uint256 cliffDuration,
+        uint256 duration,
+        bool revocable
+    ) external onlyOwner onlyWhenNotStarted {
+        require(beneficiaries.length == amounts.length, "MultiVesting: arrays are not the same length");
+        require(beneficiaries.length != 0, "MultiVesting: must vest at least one person");
+        _requireVestInputs(cliffDuration, duration);
 
-        // prettier-ignore
-        vestings[vestingId] = Vesting({
-            id: vestingId,
-            beneficiary: beneficiary,
-            amount: amount,
-            cliffDuration: cliffDuration,
-            duration: duration,
-            revocable: revocable,
-            revoked: false,
-            released: 0
-        });
-
-        _addOwnership(beneficiary, vestingId);
-
-        totalSupply += amount;
-
-        emit VestingCreated(vestingId, beneficiary, amount, cliffDuration, duration, revocable);
+        for (uint256 index = 0; index < beneficiaries.length; ++index) {
+            _vest(beneficiaries[index], amounts[index], cliffDuration, duration, revocable);
+        }
     }
 
     function transfer(address to, uint256 vestingId) external {
@@ -275,6 +268,43 @@ contract CrunchMultiVestingV2 is HasERC677TokenParent {
         startDate = timestamp;
 
         emit VestingBegin(startDate);
+    }
+
+    function _requireVestInputs(uint256 cliffDuration, uint256 duration) internal pure {
+        require(cliffDuration <= duration, "MultiVesting: cliff is longer than duration");
+        require(duration > 0, "MultiVesting: duration is 0");
+    }
+
+    function _vest(
+        address beneficiary,
+        uint256 amount,
+        uint256 cliffDuration,
+        uint256 duration,
+        bool revocable
+    ) internal {
+        require(beneficiary != address(0), "MultiVesting: beneficiary is the zero address");
+        require(amount > 0, "MultiVesting: amount is 0");
+        require(availableReserve() >= amount, "MultiVesting: available reserve is not enough");
+
+        uint256 vestingId = _nextId();
+
+        // prettier-ignore
+        vestings[vestingId] = Vesting({
+            id: vestingId,
+            beneficiary: beneficiary,
+            amount: amount,
+            cliffDuration: cliffDuration,
+            duration: duration,
+            revocable: revocable,
+            revoked: false,
+            released: 0
+        });
+
+        _addOwnership(beneficiary, vestingId);
+
+        totalSupply += amount;
+
+        emit VestingCreated(vestingId, beneficiary, amount, cliffDuration, duration, revocable);
     }
 
     function _transfer(Vesting storage vesting, address to) internal {
