@@ -407,11 +407,15 @@ contract("Crunch Multi Vesting V2", async ([owner, user, ...accounts]) => {
 
       await expect(multiVesting.revoke(ZERO)).to.be.fulfilled;
 
+      await expect(multiVesting.totalSupply()).to.eventually.be.a.bignumber.equal(half);
+
       await advance.timeAndBlock(ONE_YEAR); /* will do nothing */
 
       await expect(multiVesting.release(ZERO, fromUser)).to.be.fulfilled;
 
       await expect(crunch.balanceOf(user)).to.eventually.be.a.bignumber.equal(half);
+
+      await expect(multiVesting.totalSupply()).to.eventually.be.a.bignumber.equal(ZERO);
     });
   });
 

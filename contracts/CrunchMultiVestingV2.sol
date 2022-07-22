@@ -503,6 +503,7 @@ contract CrunchMultiVestingV2 is HasERC677TokenParent {
 
         parentToken.transfer(owner(), refund);
         vesting.amount -= refund;
+        totalSupply -= refund;
 
         emit VestingRevoked(vesting.id, vesting.beneficiary, refund);
         emit Transfer(vesting.beneficiary, address(0), refund);
