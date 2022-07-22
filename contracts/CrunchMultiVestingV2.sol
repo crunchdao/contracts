@@ -100,7 +100,7 @@ contract CrunchMultiVestingV2 is HasERC677TokenParent {
      * @return the contract 'fake' token symbol.
      */
     function symbol() external pure returns (string memory) {
-        return "mvCRUNCH.2";
+        return "mvCRUNCH";
     }
 
     /**

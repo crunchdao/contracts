@@ -47,7 +47,7 @@ contract("Crunch Multi Vesting V2", async ([owner, user, ...accounts]) => {
   });
 
   it("symbol()", async () => {
-    await expect(multiVesting.symbol()).to.eventually.be.equal("mvCRUNCH.2");
+    await expect(multiVesting.symbol()).to.eventually.be.equal("mvCRUNCH");
   });
 
   it("decimals()", async () => {
