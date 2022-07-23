@@ -44,6 +44,12 @@ module.exports = {
       port: 8545, // Standard Ethereum port (default: none)
       network_id: "*", // Any network (default: none)
     },
+    
+    coverage: {
+      host: "localhost", // Localhost (default: none)
+      port: 8546, // Standard Ethereum port (default: none)
+      network_id: "1337", // Any network (default: none)
+    },
 
     mainnet: {
       provider: function () {
@@ -162,7 +168,7 @@ module.exports = {
   // }
   // }
 
-  plugins: ["truffle-plugin-verify"],
+  plugins: ["truffle-plugin-verify", "solidity-coverage"],
   api_keys: {
     etherscan: process.env.ETHERSCAN_API_KEY,
   },
