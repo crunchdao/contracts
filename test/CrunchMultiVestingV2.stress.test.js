@@ -266,4 +266,75 @@ contract("Crunch Multi Vesting V2 [ Stress ]", async ([owner, ...accounts]) => {
 
     await expect(multiVesting.totalSupply()).to.be.eventually.a.bignumber.equals(ZERO);
   });
+
+  describe("revoke", () => {
+    it("before begin", async () => {
+      const beneficiaries = accounts.slice(0, 4);
+
+      for (const beneficiary of beneficiaries) {
+        for (const vesting of vestings) {
+          const amount = new BN(`${vesting.amount}`);
+          const cliffDuration = new BN(`${timeHelper.days(vesting.cliffDuration)}`);
+          const duration = new BN(`${timeHelper.days(vesting.duration)}`);
+
+          await expect(multiVesting.vest(beneficiary, amount, cliffDuration, duration, true)).to.be.fulfilled;
+        }
+
+        await expect(multiVesting.ownedCount(beneficiary)).to.be.eventually.a.bignumber.equals(new BN(vestings.length));
+      }
+
+      await expect(multiVesting.totalSupply()).to.be.eventually.a.bignumber.equals(new BN(vestingsTotal * beneficiaries.length));
+
+      for (const beneficiary of beneficiaries) {
+        for (const index in vestings) {
+          const id = await multiVesting.owned(beneficiary, index);
+
+          await expect(multiVesting.revoke(id, true)).to.be.fulfilled;
+        }
+      }
+
+      await expect(multiVesting.beginAt(new BN(1))).to.be.fulfilled;
+
+      for (const beneficiary of beneficiaries) {
+        await expect(multiVesting.releaseAllFor(beneficiary)).to.be.rejectedWith(Error, "MultiVesting: no tokens are due");
+      }
+
+      await expect(multiVesting.totalSupply()).to.be.eventually.a.bignumber.equals(ZERO);
+    });
+
+    it("after begin", async () => {
+      const beneficiaries = accounts.slice(0, 4);
+
+      for (const beneficiary of beneficiaries) {
+        for (const vesting of vestings) {
+          const amount = new BN(`${vesting.amount}`);
+          const cliffDuration = new BN(`${timeHelper.days(vesting.cliffDuration)}`);
+          const duration = new BN(`${timeHelper.days(vesting.duration)}`);
+
+          await expect(multiVesting.vest(beneficiary, amount, cliffDuration, duration, true)).to.be.fulfilled;
+        }
+
+        await expect(multiVesting.ownedCount(beneficiary)).to.be.eventually.a.bignumber.equals(new BN(vestings.length));
+      }
+
+      await expect(multiVesting.totalSupply()).to.be.eventually.a.bignumber.equals(new BN(vestingsTotal * beneficiaries.length));
+
+      await expect(multiVesting.beginAt(new BN(1))).to.be.fulfilled;
+
+      for (const beneficiary of beneficiaries) {
+        for (const index in vestings) {
+          const id = await multiVesting.owned(beneficiary, index);
+
+          await expect(multiVesting.revoke(id, true)).to.be.fulfilled;
+        }
+
+        await expect(multiVesting.balanceOf(beneficiary)).to.be.eventually.a.bignumber.equals(new BN(vestingsTotal));
+        await expect(multiVesting.releaseAllFor(beneficiary)).to.be.fulfilled;
+        await expect(multiVesting.balanceOf(beneficiary)).to.be.eventually.a.bignumber.equals(ZERO);
+        await expect(crunch.balanceOf(beneficiary)).to.be.eventually.a.bignumber.equals(new BN(vestingsTotal));
+      }
+
+      await expect(multiVesting.totalSupply()).to.be.eventually.a.bignumber.equals(ZERO);
+    });
+  });
 });
