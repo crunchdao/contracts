@@ -6,6 +6,7 @@ const { expect, BN } = require("./helper/chai");
 const CrunchToken = artifacts.require("CrunchToken");
 const CrunchMultiVestingV2 = artifacts.require("CrunchMultiVestingV2");
 
+const ZERO = new BN(0);
 const ONE_DAY = new BN(timeHelper.days(1));
 
 contract("Crunch Multi Vesting V2 [ Stress ]", async ([owner, ...accounts]) => {
@@ -26,6 +27,8 @@ contract("Crunch Multi Vesting V2 [ Stress ]", async ([owner, ...accounts]) => {
     { amount: 300, cliffDuration: 1, duration: 15 },
     { amount: 400, cliffDuration: 5, duration: 10 },
   ];
+
+  const vestingsTotal = vestings.map(({ amount }) => amount).reduce((accumulator, value) => accumulator + value, 0);
 
   // prettier-ignore
   const cases = [
@@ -171,5 +174,96 @@ contract("Crunch Multi Vesting V2 [ Stress ]", async ([owner, ...accounts]) => {
     for (const beneficiary of beneficiaries) {
       await expect(crunch.balanceOf(beneficiary)).to.eventually.be.a.bignumber.equal(new BN(`${total}`));
     }
+  });
+
+  it("a lot of transfer", async () => {
+    const beneficiaries = accounts.slice(0, 6);
+    const owners = {};
+
+    let id = 0;
+    for (const beneficiary of beneficiaries) {
+      for (const vesting of vestings) {
+        const amount = new BN(`${vesting.amount}`);
+        const cliffDuration = new BN(`${timeHelper.days(vesting.cliffDuration)}`);
+        const duration = new BN(`${timeHelper.days(vesting.duration)}`);
+
+        await expect(multiVesting.vest(beneficiary, amount, cliffDuration, duration, false)).to.be.fulfilled;
+
+        owners[id] = beneficiary;
+
+        id++;
+      }
+    }
+
+    id = 0;
+    for (const index in beneficiaries) {
+      const beneficiary = beneficiaries[+index];
+      const next = beneficiaries[+index + 1] || beneficiaries[0];
+
+      const fromBeneficiary = { from: beneficiary };
+
+      for (const _ of new Array(2)) {
+        await expect(multiVesting.transfer(next, id, fromBeneficiary)).to.be.fulfilled;
+        owners[id] = next;
+
+        id++;
+      }
+
+      id += 2;
+    }
+
+    id = 0;
+    for (const index in beneficiaries) {
+      const beneficiary = beneficiaries[+index];
+      const previous = beneficiaries[+index - 1] || beneficiaries[beneficiaries.length - 1];
+
+      const fromBeneficiary = { from: beneficiary };
+
+      id += 2;
+
+      for (const _ of new Array(2)) {
+        await expect(multiVesting.transfer(previous, id, fromBeneficiary)).to.be.fulfilled;
+        owners[id] = previous;
+
+        id++;
+      }
+    }
+
+    const ownedByAddress = Object.entries(owners).reduce((accumulator, [id, address]) => {
+      if (!(address in accumulator)) {
+        accumulator[address] = [];
+      }
+
+      accumulator[address].push(+id);
+
+      return accumulator;
+    }, {});
+
+    for (const beneficiary of beneficiaries) {
+      await expect(multiVesting.ownedCount(beneficiary)).to.be.eventually.a.bignumber.equals(new BN(vestings.length));
+
+      const owned = [];
+      for (const index in vestings) {
+        owned.push((await multiVesting.owned(beneficiary, index)).toNumber());
+      }
+
+      expect(owned).to.have.members(ownedByAddress[beneficiary]);
+    }
+
+    await expect(multiVesting.totalSupply()).to.be.eventually.a.bignumber.equals(new BN(vestingsTotal * beneficiaries.length));
+
+    await expect(multiVesting.beginAt(new BN(1))).to.be.fulfilled;
+
+    for (const beneficiary of beneficiaries) {
+      const fromBeneficiary = { from: beneficiary };
+
+      await expect(multiVesting.balanceOf(beneficiary)).to.be.eventually.a.bignumber.equals(new BN(vestingsTotal));
+
+      await expect(multiVesting.releaseAll(fromBeneficiary)).to.be.fulfilled;
+      await expect(multiVesting.balanceOf(beneficiary)).to.be.eventually.a.bignumber.equals(ZERO);
+      await expect(crunch.balanceOf(beneficiary)).to.be.eventually.a.bignumber.equals(new BN(vestingsTotal));
+    }
+
+    await expect(multiVesting.totalSupply()).to.be.eventually.a.bignumber.equals(ZERO);
   });
 });
