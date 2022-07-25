@@ -1245,4 +1245,59 @@ contract("Crunch Multi Vesting V2", async ([owner, user, ...accounts]) => {
       });
     });
   });
+
+  describe("event VestingRevoked", () => {
+    const beneficiary = user;
+
+    it("when before cliff", async () => {
+      await expect(crunch.transfer(multiVesting.address, ONE)).to.be.fulfilled;
+      await expect(multiVesting.vest(beneficiary, ONE, ZERO, ONE, true)).to.be.fulfilled;
+      await expect(multiVesting.beginNow()).to.be.fulfilled;
+
+      await advance.timeAndBlock(timeHelper.days(1));
+
+      const transaction = await multiVesting.revoke(ZERO, false);
+      const event = extractEvent(transaction, (log) => log.event == "VestingRevoked")[0];
+
+      expect(event.args.vestingId).to.be.a.bignumber.equals(ZERO);
+      expect(event.args.refund).to.be.a.bignumber.equals(ZERO);
+      expect(event.args).to.include({
+        beneficiary,
+      });
+    });
+
+    it("when after duration", async () => {
+      await expect(crunch.transfer(multiVesting.address, ONE)).to.be.fulfilled;
+      await expect(multiVesting.vest(beneficiary, ONE, timeHelper.days(1), timeHelper.days(1), true)).to.be.fulfilled;
+      await expect(multiVesting.beginNow()).to.be.fulfilled;
+
+      await advance.timeAndBlock(timeHelper.days(1));
+
+      const transaction = await multiVesting.revoke(ZERO, false);
+      const event = extractEvent(transaction, (log) => log.event == "VestingRevoked")[0];
+
+      expect(event.args.vestingId).to.be.a.bignumber.equals(ZERO);
+      expect(event.args.refund).to.be.a.bignumber.equals(ONE);
+      expect(event.args).to.include({
+        beneficiary,
+      });
+    });
+
+    it("when in between", async () => {
+      await expect(crunch.transfer(multiVesting.address, TWO)).to.be.fulfilled;
+      await expect(multiVesting.vest(beneficiary, TWO, ZERO, timeHelper.days(2), true)).to.be.fulfilled;
+      await expect(multiVesting.beginNow()).to.be.fulfilled;
+
+      await advance.timeAndBlock(timeHelper.days(1));
+
+      const transaction = await multiVesting.revoke(ZERO, false);
+      const event = extractEvent(transaction, (log) => log.event == "VestingRevoked")[0];
+
+      expect(event.args.vestingId).to.be.a.bignumber.equals(ZERO);
+      expect(event.args.refund).to.be.a.bignumber.equals(ONE);
+      expect(event.args).to.include({
+        beneficiary,
+      });
+    });
+  });
 });
