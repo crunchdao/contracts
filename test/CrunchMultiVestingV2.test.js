@@ -474,13 +474,44 @@ contract("Crunch Multi Vesting V2", async ([owner, user, ...accounts]) => {
     });
   });
 
-  describe("releaseAllFor()", () => {
+  describe("releaseAllFor(address)", () => {
     it("not the owner", async () => {
       await expect(multiVesting.releaseAllFor(user, fromUser)).to.be.rejectedWith(Error, "Ownable: caller is not the owner");
     });
 
     it("nothing is due", async () => {
       await expect(multiVesting.releaseAllFor(user)).to.be.rejectedWith(Error, "MultiVesting: no tokens are due");
+    });
+
+    it("ok", async () => {
+      await expect(crunch.transfer(multiVesting.address, TEN.muln(2))).to.be.fulfilled;
+
+      await expect(multiVesting.vest(user, TEN, timeHelper.days(2), timeHelper.days(10), true)).to.be.fulfilled;
+      await expect(multiVesting.vest(user, TEN, timeHelper.days(2), timeHelper.days(10), true)).to.be.fulfilled;
+
+      await expect(multiVesting.beginNow()).to.be.fulfilled;
+
+      await advance.timeAndBlock(timeHelper.days(2));
+
+      await expect(multiVesting.releaseAllFor(user)).to.be.rejectedWith(Error, "MultiVesting: no tokens are due");
+
+      await advance.timeAndBlock(timeHelper.days(1));
+
+      await expect(multiVesting.releaseAllFor(user)).to.be.fulfilled;
+      await expect(multiVesting.balanceOf(user)).to.be.eventually.a.bignumber.equals(new BN(9).muln(2));
+      await expect(crunch.balanceOf(user)).to.be.eventually.a.bignumber.equals(new BN(1).muln(2));
+
+      await advance.timeAndBlock(timeHelper.days(4));
+
+      await expect(multiVesting.releaseAllFor(user)).to.be.fulfilled;
+      await expect(multiVesting.balanceOf(user)).to.be.eventually.a.bignumber.equals(new BN(5).muln(2));
+      await expect(crunch.balanceOf(user)).to.be.eventually.a.bignumber.equals(new BN(5).muln(2));
+
+      await advance.timeAndBlock(timeHelper.days(5));
+
+      await expect(multiVesting.releaseAllFor(user)).to.be.fulfilled;
+      await expect(multiVesting.balanceOf(user)).to.be.eventually.a.bignumber.equals(ZERO);
+      await expect(crunch.balanceOf(user)).to.be.eventually.a.bignumber.equals(TEN.muln(2));
     });
   });
 
