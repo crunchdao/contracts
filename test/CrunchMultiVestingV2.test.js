@@ -1300,4 +1300,18 @@ contract("Crunch Multi Vesting V2", async ([owner, user, ...accounts]) => {
       });
     });
   });
+
+  it("event VestingTransfered", async () => {
+    await expect(crunch.transfer(multiVesting.address, ONE)).to.be.fulfilled;
+    await expect(multiVesting.vest(owner, ONE, ZERO, ONE, true)).to.be.fulfilled;
+
+    const transaction = await multiVesting.transfer(user, ZERO);
+    const event = extractEvent(transaction, (log) => log.event == "VestingTransfered")[0];
+
+    expect(event.args.vestingId).to.be.a.bignumber.equals(ZERO);
+    expect(event.args).to.include({
+      from: owner,
+      to: user,
+    });
+  });
 });
