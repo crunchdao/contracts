@@ -1028,7 +1028,7 @@ contract("Crunch Multi Vesting V2", async ([owner, user, ...accounts]) => {
   });
 
   function extractEvent(transaction, matcher) {
-    return transaction.logs.filter(matcher).map(({ args }) => args);
+    return transaction.logs.filter(matcher);
   }
 
   describe("event Transfer", () => {
@@ -1038,10 +1038,10 @@ contract("Crunch Multi Vesting V2", async ([owner, user, ...accounts]) => {
       await expect(crunch.transfer(multiVesting.address, ONE)).to.be.fulfilled;
 
       const transaction = await multiVesting.vest(beneficiary, ONE, ONE, ONE, true);
-      const transferEvent = extractEvent(transaction, (log) => log.event == "Transfer")[0];
+      const event = extractEvent(transaction, (log) => log.event == "Transfer")[0];
 
-      expect(transferEvent.value).to.be.a.bignumber.equals(ONE);
-      expect(transferEvent).to.include({
+      expect(event.args.value).to.be.a.bignumber.equals(ONE);
+      expect(event.args).to.include({
         from: NULL,
         to: beneficiary,
       });
@@ -1052,10 +1052,10 @@ contract("Crunch Multi Vesting V2", async ([owner, user, ...accounts]) => {
       await expect(multiVesting.vest(owner, ONE, ONE, ONE, true)).to.be.fulfilled;
 
       const transaction = await multiVesting.transfer(user, ZERO);
-      const transferEvent = extractEvent(transaction, (log) => log.event == "Transfer")[0];
+      const event = extractEvent(transaction, (log) => log.event == "Transfer")[0];
 
-      expect(transferEvent.value).to.be.a.bignumber.equals(ONE);
-      expect(transferEvent).to.include({
+      expect(event.args.value).to.be.a.bignumber.equals(ONE);
+      expect(event.args).to.include({
         from: owner,
         to: user,
       });
@@ -1068,10 +1068,10 @@ contract("Crunch Multi Vesting V2", async ([owner, user, ...accounts]) => {
       await expect(multiVesting.vest(beneficiary, ONE, ONE, ONE, true)).to.be.fulfilled;
 
       const transaction = await multiVesting.revoke(ZERO, false);
-      const transferEvent = extractEvent(transaction, (log) => log.event == "Transfer")[0];
+      const event = extractEvent(transaction, (log) => log.event == "Transfer")[0];
 
-      expect(transferEvent.value).to.be.a.bignumber.equals(ONE);
-      expect(transferEvent).to.include({
+      expect(event.args.value).to.be.a.bignumber.equals(ONE);
+      expect(event.args).to.include({
         from: beneficiary,
         to: NULL,
       });
@@ -1085,13 +1085,30 @@ contract("Crunch Multi Vesting V2", async ([owner, user, ...accounts]) => {
       await expect(multiVesting.beginAt(new BN(1))).to.be.fulfilled;
 
       const transaction = await multiVesting.release(ZERO, fromUser);
-      const transferEvent = extractEvent(transaction, (log) => log.event == "Transfer")[1];
+      const event = extractEvent(transaction, (log) => log.event == "Transfer")[1];
 
-      expect(transferEvent.value).to.be.a.bignumber.equals(ONE);
-      expect(transferEvent).to.include({
+      expect(event.args.value).to.be.a.bignumber.equals(ONE);
+      expect(event.args).to.include({
         from: beneficiary,
         to: NULL,
       });
+    });
+  });
+
+  describe("event VestingBegin", () => {
+    it("now", async () => {
+      const transaction = await multiVesting.beginNow();
+      const block = await blockHelper.get(transaction.receipt.blockNumber);
+      const event = extractEvent(transaction, (log) => log.event == "VestingBegin")[0];
+
+      expect(event.args.startDate).to.be.a.bignumber.equals(new BN(block.timestamp));
+    });
+
+    it("at", async () => {
+      const transaction = await multiVesting.beginAt(ONE);
+      const event = extractEvent(transaction, (log) => log.event == "VestingBegin")[0];
+
+      expect(event.args.startDate).to.be.a.bignumber.equals(ONE);
     });
   });
 });
