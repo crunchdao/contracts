@@ -168,7 +168,7 @@ contract CrunchMultiVestingV2 is HasERC677TokenParent {
         uint256 duration,
         bool revocable
     ) external onlyOwner onlyWhenNotStarted {
-        _requireVestInputs(cliffDuration, duration);
+        _requireVestInputs(duration);
         _vest(beneficiary, amount, cliffDuration, duration, revocable);
     }
 
@@ -198,7 +198,7 @@ contract CrunchMultiVestingV2 is HasERC677TokenParent {
     ) external onlyOwner onlyWhenNotStarted {
         require(beneficiaries.length == amounts.length, "MultiVesting: arrays are not the same length");
         require(beneficiaries.length != 0, "MultiVesting: must vest at least one person");
-        _requireVestInputs(cliffDuration, duration);
+        _requireVestInputs(duration);
 
         for (uint256 index = 0; index < beneficiaries.length; ++index) {
             _vest(beneficiaries[index], amounts[index], cliffDuration, duration, revocable);
@@ -387,8 +387,7 @@ contract CrunchMultiVestingV2 is HasERC677TokenParent {
     /**
      * @notice Check the shared inputs of a vest method.
      */
-    function _requireVestInputs(uint256 cliffDuration, uint256 duration) internal pure {
-        require(cliffDuration <= duration, "MultiVesting: cliff is longer than duration");
+    function _requireVestInputs(uint256 duration) internal pure {
         require(duration > 0, "MultiVesting: duration is 0");
     }
 
