@@ -1111,4 +1111,90 @@ contract("Crunch Multi Vesting V2", async ([owner, user, ...accounts]) => {
       expect(event.args.startDate).to.be.a.bignumber.equals(ONE);
     });
   });
+
+  describe("event TokensReleased", () => {
+    it("on release", async () => {
+      const beneficiary = user;
+
+      await expect(crunch.transfer(multiVesting.address, ONE)).to.be.fulfilled;
+      await expect(multiVesting.vest(beneficiary, ONE, ONE, ONE, true)).to.be.fulfilled;
+      await expect(multiVesting.beginAt(new BN(1))).to.be.fulfilled;
+
+      const transaction = await multiVesting.release(ZERO, fromUser);
+      const event = extractEvent(transaction, (log) => log.event == "TokensReleased")[0];
+
+      expect(event.args.vestingId).to.be.a.bignumber.equals(ZERO);
+      expect(event.args.amount).to.be.a.bignumber.equals(ONE);
+      expect(event.args).to.include({
+        beneficiary,
+      });
+    });
+
+    it("on releaseFor", async () => {
+      const beneficiary = user;
+
+      await expect(crunch.transfer(multiVesting.address, ONE)).to.be.fulfilled;
+      await expect(multiVesting.vest(beneficiary, ONE, ONE, ONE, true)).to.be.fulfilled;
+      await expect(multiVesting.beginAt(new BN(1))).to.be.fulfilled;
+
+      const transaction = await multiVesting.releaseFor(ZERO);
+      const event = extractEvent(transaction, (log) => log.event == "TokensReleased")[0];
+
+      expect(event.args.vestingId).to.be.a.bignumber.equals(ZERO);
+      expect(event.args.amount).to.be.a.bignumber.equals(ONE);
+      expect(event.args).to.include({
+        beneficiary,
+      });
+    });
+
+    it("on releaseAll", async () => {
+      const beneficiary = user;
+
+      await expect(crunch.transfer(multiVesting.address, THREE)).to.be.fulfilled;
+      await expect(multiVesting.vestMultiple([beneficiary, beneficiary], [ONE, TWO], ONE, ONE, true)).to.be.fulfilled;
+      await expect(multiVesting.beginAt(new BN(1))).to.be.fulfilled;
+
+      const transaction = await multiVesting.releaseAll(fromUser);
+      const events = extractEvent(transaction, (log) => log.event == "TokensReleased");
+
+      expect(events.length).to.equals(2);
+
+      expect(events[0].args.vestingId).to.be.a.bignumber.equals(ZERO);
+      expect(events[0].args.amount).to.be.a.bignumber.equals(ONE);
+      expect(events[0].args).to.include({
+        beneficiary,
+      });
+
+      expect(events[1].args.vestingId).to.be.a.bignumber.equals(ONE);
+      expect(events[1].args.amount).to.be.a.bignumber.equals(TWO);
+      expect(events[1].args).to.include({
+        beneficiary,
+      });
+    });
+
+    it("on releaseAllFor", async () => {
+      const beneficiary = user;
+
+      await expect(crunch.transfer(multiVesting.address, THREE)).to.be.fulfilled;
+      await expect(multiVesting.vestMultiple([beneficiary, beneficiary], [ONE, TWO], ONE, ONE, true)).to.be.fulfilled;
+      await expect(multiVesting.beginAt(new BN(1))).to.be.fulfilled;
+
+      const transaction = await multiVesting.releaseAllFor(beneficiary);
+      const events = extractEvent(transaction, (log) => log.event == "TokensReleased");
+
+      expect(events.length).to.equals(2);
+
+      expect(events[0].args.vestingId).to.be.a.bignumber.equals(ZERO);
+      expect(events[0].args.amount).to.be.a.bignumber.equals(ONE);
+      expect(events[0].args).to.include({
+        beneficiary,
+      });
+
+      expect(events[1].args.vestingId).to.be.a.bignumber.equals(ONE);
+      expect(events[1].args.amount).to.be.a.bignumber.equals(TWO);
+      expect(events[1].args).to.include({
+        beneficiary,
+      });
+    });
+  });
 });
