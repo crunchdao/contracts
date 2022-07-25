@@ -20,7 +20,7 @@ contract("Crunch Multi Vesting V2 [ Stress ]", async ([owner, ...accounts]) => {
     await crunch.transfer(multiVesting.address, await crunch.totalSupply());
   });
 
-  // prettier-ignore
+  prettier-ignore
   const vestings = [
     { amount: 100, cliffDuration: 2, duration:  5 },
     { amount: 200, cliffDuration: 3, duration: 20 },
@@ -30,7 +30,7 @@ contract("Crunch Multi Vesting V2 [ Stress ]", async ([owner, ...accounts]) => {
 
   const vestingsTotal = vestings.map(({ amount }) => amount).reduce((accumulator, value) => accumulator + value, 0);
 
-  // prettier-ignore
+  prettier-ignore
   const cases = [
     { balance:   0 +   0 +  0  +   0, releasable: [          ] },
     { balance:   0 +   0 +  20 +   0, releasable: [      2   ] },
@@ -244,7 +244,11 @@ contract("Crunch Multi Vesting V2 [ Stress ]", async ([owner, ...accounts]) => {
 
       const owned = [];
       for (const index in vestings) {
-        owned.push((await multiVesting.owned(beneficiary, index)).toNumber());
+        const vestingId = await multiVesting.owned(beneficiary, index)
+        owned.push(vestingId.toNumber());
+
+        const vesting = await multiVesting.vestings(vestingId)
+        expect(vesting.beneficiary).to.be.equals(beneficiary)
       }
 
       expect(owned).to.have.members(ownedByAddress[beneficiary]);
