@@ -20,7 +20,7 @@ contract("Crunch Multi Vesting V2 [ Stress ]", async ([owner, ...accounts]) => {
     await crunch.transfer(multiVesting.address, await crunch.totalSupply());
   });
 
-  prettier-ignore
+  // prettier-ignore
   const vestings = [
     { amount: 100, cliffDuration: 2, duration:  5 },
     { amount: 200, cliffDuration: 3, duration: 20 },
@@ -30,7 +30,7 @@ contract("Crunch Multi Vesting V2 [ Stress ]", async ([owner, ...accounts]) => {
 
   const vestingsTotal = vestings.map(({ amount }) => amount).reduce((accumulator, value) => accumulator + value, 0);
 
-  prettier-ignore
+  // prettier-ignore
   const cases = [
     { balance:   0 +   0 +  0  +   0, releasable: [          ] },
     { balance:   0 +   0 +  20 +   0, releasable: [      2   ] },
