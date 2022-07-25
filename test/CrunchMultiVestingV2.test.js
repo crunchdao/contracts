@@ -137,10 +137,6 @@ contract("Crunch Multi Vesting V2", async ([owner, user, ...accounts]) => {
       await expect(multiVesting.vest(owner, ONE, ZERO, ZERO, true)).to.be.rejectedWith(Error, "MultiVesting: duration is 0");
     });
 
-    it("cliff longer than duration", async () => {
-      await expect(multiVesting.vest(owner, ONE, TWO, ONE, true)).to.be.rejectedWith(Error, "MultiVesting: cliff is longer than duration");
-    });
-
     it("no reserve", async () => {
       await expect(multiVesting.vest(owner, TWO, ONE, ONE, true)).to.be.rejectedWith(Error, "MultiVesting: available reserve is not enough");
 
@@ -232,10 +228,6 @@ contract("Crunch Multi Vesting V2", async ([owner, user, ...accounts]) => {
 
     it("duration=0", async () => {
       await expect(multiVesting.vestMultiple([owner, user], [ONE], ZERO, ZERO, true)).to.be.rejectedWith(Error, "MultiVesting: arrays are not the same length");
-    });
-
-    it("cliff longer than duration=0", async () => {
-      await expect(multiVesting.vestMultiple([owner], [ONE], TWO, ONE, true)).to.be.rejectedWith(Error, "MultiVesting: cliff is longer than duration");
     });
 
     it("after started", async () => {
