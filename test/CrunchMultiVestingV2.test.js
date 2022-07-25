@@ -1197,4 +1197,52 @@ contract("Crunch Multi Vesting V2", async ([owner, user, ...accounts]) => {
       });
     });
   });
+
+  describe("event VestingCreated", () => {
+    it("on vest", async () => {
+      const beneficiary = user;
+
+      await expect(crunch.transfer(multiVesting.address, ONE)).to.be.fulfilled;
+
+      const transaction = await multiVesting.vest(beneficiary, ONE, TWO, THREE, true);
+      const event = extractEvent(transaction, (log) => log.event == "VestingCreated")[0];
+
+      expect(event.args.vestingId).to.be.a.bignumber.equals(ZERO);
+      expect(event.args.amount).to.be.a.bignumber.equals(ONE);
+      expect(event.args.cliffDuration).to.be.a.bignumber.equals(TWO);
+      expect(event.args.duration).to.be.a.bignumber.equals(THREE);
+      expect(event.args).to.include({
+        beneficiary,
+        revocable: true,
+      });
+    });
+
+    it("on vestMultiple", async () => {
+      const beneficiaries = [owner, user];
+      const amounts = [ONE, TWO];
+
+      await expect(crunch.transfer(multiVesting.address, THREE)).to.be.fulfilled;
+
+      const transaction = await multiVesting.vestMultiple(beneficiaries, amounts, TWO, THREE, true);
+      const event = extractEvent(transaction, (log) => log.event == "VestingCreated");
+
+      expect(event[0].args.vestingId).to.be.a.bignumber.equals(ZERO);
+      expect(event[0].args.amount).to.be.a.bignumber.equals(ONE);
+      expect(event[0].args.cliffDuration).to.be.a.bignumber.equals(TWO);
+      expect(event[0].args.duration).to.be.a.bignumber.equals(THREE);
+      expect(event[0].args).to.include({
+        beneficiary: beneficiaries[0],
+        revocable: true,
+      });
+
+      expect(event[1].args.vestingId).to.be.a.bignumber.equals(ONE);
+      expect(event[1].args.amount).to.be.a.bignumber.equals(TWO);
+      expect(event[1].args.cliffDuration).to.be.a.bignumber.equals(TWO);
+      expect(event[1].args.duration).to.be.a.bignumber.equals(THREE);
+      expect(event[1].args).to.include({
+        beneficiary: beneficiaries[1],
+        revocable: true,
+      });
+    });
+  });
 });
