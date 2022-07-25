@@ -327,9 +327,60 @@ contract("Crunch Multi Vesting V2", async ([owner, user, ...accounts]) => {
     });
   });
 
-  describe("release()", () => {
+  describe("release(uint256)", () => {
     it("not existing", async () => {
       await expect(multiVesting.release(ZERO, fromUser)).to.be.rejectedWith(Error, "MultiVesting: vesting does not exists");
+      await expect(multiVesting.release(ONE, fromUser)).to.be.rejectedWith(Error, "MultiVesting: vesting does not exists");
+    });
+
+    it("must be the beneficiary", async () => {
+      await expect(crunch.transfer(multiVesting.address, ONE)).to.be.fulfilled;
+
+      await expect(multiVesting.vest(owner, ONE, ONE, ONE, true)).to.be.fulfilled;
+
+      await expect(multiVesting.release(ZERO, fromUser)).to.be.rejectedWith(Error, "MultiVesting: not the beneficiary");
+    });
+
+    it("no token are due", async () => {
+      await expect(crunch.transfer(multiVesting.address, ONE)).to.be.fulfilled;
+
+      await expect(multiVesting.vest(user, ONE, ONE, timeHelper.days(1), true)).to.be.fulfilled;
+
+      await expect(multiVesting.release(ZERO, fromUser)).to.be.rejectedWith(Error, "MultiVesting: no tokens are due");
+
+      await expect(multiVesting.beginNow()).to.be.fulfilled;
+
+      await expect(multiVesting.release(ZERO, fromUser)).to.be.rejectedWith(Error, "MultiVesting: no tokens are due");
+    });
+
+    it("ok", async () => {
+      await expect(crunch.transfer(multiVesting.address, TEN)).to.be.fulfilled;
+
+      await expect(multiVesting.vest(user, TEN, timeHelper.days(2), timeHelper.days(10), true)).to.be.fulfilled;
+
+      await expect(multiVesting.beginNow()).to.be.fulfilled;
+
+      await advance.timeAndBlock(timeHelper.days(2));
+
+      await expect(multiVesting.release(ZERO, fromUser)).to.be.rejectedWith(Error, "MultiVesting: no tokens are due");
+
+      await advance.timeAndBlock(timeHelper.days(1));
+
+      await expect(multiVesting.release(ZERO, fromUser)).to.be.fulfilled;
+      await expect(multiVesting.balanceOf(user)).to.be.eventually.a.bignumber.equals(new BN(9));
+      await expect(crunch.balanceOf(user)).to.be.eventually.a.bignumber.equals(new BN(1));
+
+      await advance.timeAndBlock(timeHelper.days(4));
+
+      await expect(multiVesting.release(ZERO, fromUser)).to.be.fulfilled;
+      await expect(multiVesting.balanceOf(user)).to.be.eventually.a.bignumber.equals(new BN(5));
+      await expect(crunch.balanceOf(user)).to.be.eventually.a.bignumber.equals(new BN(5));
+
+      await advance.timeAndBlock(timeHelper.days(5));
+
+      await expect(multiVesting.release(ZERO, fromUser)).to.be.fulfilled;
+      await expect(multiVesting.balanceOf(user)).to.be.eventually.a.bignumber.equals(ZERO);
+      await expect(crunch.balanceOf(user)).to.be.eventually.a.bignumber.equals(TEN);
     });
   });
 
