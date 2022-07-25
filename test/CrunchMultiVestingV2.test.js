@@ -151,6 +151,16 @@ contract("Crunch Multi Vesting V2", async ([owner, user, ...accounts]) => {
       await expect(multiVesting.vest(owner, ONE, ONE, ONE, true)).to.be.fulfilled;
     });
 
+    it("after started", async () => {
+      await expect(multiVesting.beginNow()).to.be.fulfilled;
+
+      await expect(multiVesting.vest(owner, TWO, ONE, ONE, true)).to.be.rejectedWith(Error, "MultiVesting: already started");
+    });
+
+    it("not the owner", async () => {
+      await expect(multiVesting.vest(owner, TWO, ONE, ONE, true, fromUser)).to.be.rejectedWith(Error, "Ownable: caller is not the owner");
+    });
+
     it("ok", async () => {
       await expect(crunch.transfer(multiVesting.address, ONE)).to.be.fulfilled;
       await expect(multiVesting.vest(user, ONE, TWO, THREE, true)).to.be.fulfilled;
@@ -216,12 +226,26 @@ contract("Crunch Multi Vesting V2", async ([owner, user, ...accounts]) => {
       await expect(multiVesting.vestMultiple([NULL], [ONE], ONE, ONE, true)).to.be.rejectedWith(Error, "MultiVesting: beneficiary is the zero address");
     });
 
+    it("beneficiaries.length == 0", async () => {
+      await expect(multiVesting.vestMultiple([], [], ONE, ONE, true)).to.be.rejectedWith(Error, "MultiVesting: must vest at least one person");
+    });
+
     it("duration=0", async () => {
       await expect(multiVesting.vestMultiple([owner, user], [ONE], ZERO, ZERO, true)).to.be.rejectedWith(Error, "MultiVesting: arrays are not the same length");
     });
 
     it("cliff longer than duration=0", async () => {
       await expect(multiVesting.vestMultiple([owner], [ONE], TWO, ONE, true)).to.be.rejectedWith(Error, "MultiVesting: cliff is longer than duration");
+    });
+
+    it("after started", async () => {
+      await expect(multiVesting.beginNow()).to.be.fulfilled;
+
+      await expect(multiVesting.vestMultiple([owner], [ONE], ONE, ONE, true)).to.be.rejectedWith(Error, "MultiVesting: already started");
+    });
+
+    it("not the owner", async () => {
+      await expect(multiVesting.vestMultiple([owner], [ONE], ONE, ONE, true, fromUser)).to.be.rejectedWith(Error, "Ownable: caller is not the owner");
     });
 
     it("no reserve", async () => {
@@ -299,6 +323,22 @@ contract("Crunch Multi Vesting V2", async ([owner, user, ...accounts]) => {
       await expect(multiVesting.vest(owner, ONE, ONE, ONE, true)).to.be.fulfilled;
 
       await expect(multiVesting.transfer(user, ZERO, fromUser)).to.be.rejectedWith(Error, "MultiVesting: not the beneficiary");
+    });
+
+    it("to=self", async () => {
+      await expect(crunch.transfer(multiVesting.address, ONE)).to.be.fulfilled;
+
+      await expect(multiVesting.vest(owner, ONE, ONE, ONE, true)).to.be.fulfilled;
+
+      await expect(multiVesting.transfer(owner, ZERO)).to.be.rejectedWith(Error, "MultiVesting: cannot transfer to itself");
+    });
+
+    it("to=0x0", async () => {
+      await expect(crunch.transfer(multiVesting.address, ONE)).to.be.fulfilled;
+
+      await expect(multiVesting.vest(owner, ONE, ONE, ONE, true)).to.be.fulfilled;
+
+      await expect(multiVesting.transfer(NULL, ZERO)).to.be.rejectedWith(Error, "MultiVesting: target is the zero address");
     });
 
     it("ok", async () => {
@@ -516,6 +556,10 @@ contract("Crunch Multi Vesting V2", async ([owner, user, ...accounts]) => {
   });
 
   describe("revoke(address, index)", () => {
+    it("not the owner", async () => {
+      await expect(multiVesting.revoke(ZERO, false, fromUser)).to.be.rejectedWith(Error, "Ownable: caller is not the owner");
+    });
+
     it("not revocable", async () => {
       await expect(crunch.transfer(multiVesting.address, ONE)).to.be.fulfilled;
 
@@ -965,6 +1009,10 @@ contract("Crunch Multi Vesting V2", async ([owner, user, ...accounts]) => {
   });
 
   describe("emptyAvailableReserve()", () => {
+    it("not the owner", async () => {
+      await expect(multiVesting.emptyAvailableReserve(fromUser)).to.be.rejectedWith(Error, "Ownable: caller is not the owner");
+    });
+
     it("no reserve", async () => {
       await expect(multiVesting.emptyAvailableReserve()).to.be.rejectedWith(Error, "MultiVesting: no token available");
     });
