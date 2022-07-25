@@ -1034,4 +1034,72 @@ contract("Crunch Multi Vesting V2", async ([owner, user, ...accounts]) => {
       await expect(crunch.balanceOf(owner)).to.be.eventually.a.bignumber.equals((await crunch.totalSupply()).sub(ONE));
     });
   });
+
+  function extractEvent(transaction, matcher) {
+    return transaction.logs.filter(matcher).map(({ args }) => args);
+  }
+
+  describe("event Transfer", () => {
+    it("on vest", async () => {
+      const beneficiary = user;
+
+      await expect(crunch.transfer(multiVesting.address, ONE)).to.be.fulfilled;
+
+      const transaction = await multiVesting.vest(beneficiary, ONE, ONE, ONE, true);
+      const transferEvent = extractEvent(transaction, (log) => log.event == "Transfer")[0];
+
+      expect(transferEvent.value).to.be.a.bignumber.equals(ONE);
+      expect(transferEvent).to.include({
+        from: NULL,
+        to: beneficiary,
+      });
+    });
+
+    it("on transfer", async () => {
+      await expect(crunch.transfer(multiVesting.address, ONE)).to.be.fulfilled;
+      await expect(multiVesting.vest(owner, ONE, ONE, ONE, true)).to.be.fulfilled;
+
+      const transaction = await multiVesting.transfer(user, ZERO);
+      const transferEvent = extractEvent(transaction, (log) => log.event == "Transfer")[0];
+
+      expect(transferEvent.value).to.be.a.bignumber.equals(ONE);
+      expect(transferEvent).to.include({
+        from: owner,
+        to: user,
+      });
+    });
+
+    it("on revoke", async () => {
+      const beneficiary = user;
+
+      await expect(crunch.transfer(multiVesting.address, ONE)).to.be.fulfilled;
+      await expect(multiVesting.vest(beneficiary, ONE, ONE, ONE, true)).to.be.fulfilled;
+
+      const transaction = await multiVesting.revoke(ZERO, false);
+      const transferEvent = extractEvent(transaction, (log) => log.event == "Transfer")[0];
+
+      expect(transferEvent.value).to.be.a.bignumber.equals(ONE);
+      expect(transferEvent).to.include({
+        from: beneficiary,
+        to: NULL,
+      });
+    });
+
+    it("on release", async () => {
+      const beneficiary = user;
+
+      await expect(crunch.transfer(multiVesting.address, ONE)).to.be.fulfilled;
+      await expect(multiVesting.vest(beneficiary, ONE, ONE, ONE, true)).to.be.fulfilled;
+      await expect(multiVesting.beginAt(new BN(1))).to.be.fulfilled;
+
+      const transaction = await multiVesting.release(ZERO, fromUser);
+      const transferEvent = extractEvent(transaction, (log) => log.event == "Transfer")[1];
+
+      expect(transferEvent.value).to.be.a.bignumber.equals(ONE);
+      expect(transferEvent).to.include({
+        from: beneficiary,
+        to: NULL,
+      });
+    });
+  });
 });
