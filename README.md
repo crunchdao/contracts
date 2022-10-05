@@ -56,14 +56,30 @@ Instant sell of you $CRUNCHs directly by CRUNCH DAO.
 
 ## Multi-Vesting
 
+### v1
+
 Shared vesting contract allowing multiple users.
 
 | Resource | File |
 | --- | --- |
-| Source Code | [contracts/CrunchMultiVesting.sol](contracts/CrunchMultiVesting.sol) |
+|  Source Code | [contracts/CrunchMultiVesting.sol](contracts/CrunchMultiVesting.sol) |
 | Tests | [test/CrunchMultiVesting.test.js](test/CrunchMultiVesting.test.js) |
 | Stress Tests | [test/CrunchMultiVesting.stress.test.js](test/CrunchMultiVesting.stress.test.js) |
 
 | Network | Address |
 | --- | --- |
 | mainnet | [0xe469f12f4746b5ae105a1b888bff5a1b9e27fee5](https://etherscan.io/address/0xe469f12f4746b5ae105a1b888bff5a1b9e27fee5) |
+
+### v2
+
+Shared vesting contract allowing multiple users but extra features like revocation and transferability.
+
+| Resource | File |
+| --- | --- |
+| Source Code | [contracts/CrunchMultiVestingV2.sol](contracts/CrunchMultiVestingV2.sol) |
+| Tests | [test/CrunchMultiVestingV2.test.js](test/CrunchMultiVestingV2.test.js) |
+| Stress Tests | [test/CrunchMultiVestingV2.stress.test.js](test/CrunchMultiVestingV2.stress.test.js) |
+
+| Network | Address |
+| --- | --- |
+| mainnet | [0xf3b262b8623aa8eaf302bd46a393179df0ed13c5](https://etherscan.io/address/0xf3b262b8623aa8eaf302bd46a393179df0ed13c5) |
