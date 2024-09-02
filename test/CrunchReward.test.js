@@ -3,6 +3,7 @@ const { expect, BN } = require("./helper/chai");
 
 const CrunchToken = artifacts.require("CrunchToken");
 const CrunchReward = artifacts.require("CrunchReward");
+const USDCoin = artifacts.require("USDCoin");
 
 contract("Crunch Reward", async (accounts) => {
   let crunch;
@@ -136,5 +137,31 @@ contract("Crunch Reward", async (accounts) => {
     await expect(await crunch.balanceOf(accounts[0])).to.be.a.bignumber.equal(
       await crunch.totalSupply()
     );
+  });
+
+  it("setCrunch() : to usdc", async () => {
+    const reserve = 100;
+    await crunch.transfer(reward.address, reserve);
+
+    const usdc = await USDCoin.new();
+
+    await expect(reward.setCrunch(usdc.address)).to.be.fulfilled;
+
+    await expect(reward.reserve()).to.eventually.be.a.bignumber.equal(new BN(0));
+
+    await usdc.mint(reward.address, reserve);
+    await expect(reward.reserve()).to.eventually.be.a.bignumber.equal(new BN(reserve));
+
+    await expect(await crunch.balanceOf(reward.address)).to.be.a.bignumber.equal(new BN(reserve));
+    await expect(await usdc.balanceOf(reward.address)).to.be.a.bignumber.equal(new BN(reserve));
+
+    const half = reserve / 2;
+    await expect(reward.distribute(accounts.slice(1, 3), [half, half])).to.be.fulfilled;
+
+    await expect(await usdc.balanceOf(accounts[1])).to.be.a.bignumber.equal(new BN(half));
+    await expect(await usdc.balanceOf(accounts[2])).to.be.a.bignumber.equal(new BN(half));
+
+    await expect(await crunch.balanceOf(reward.address)).to.be.a.bignumber.equal(new BN(reserve));
+    await expect(await usdc.balanceOf(reward.address)).to.be.a.bignumber.equal(new BN(0));
   });
 });
