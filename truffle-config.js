@@ -45,6 +45,12 @@ module.exports = {
       network_id: "*", // Any network (default: none)
     },
     
+    ganache: {
+      host: "localhost", // Localhost (default: none)
+      port: 7545, // Standard Ethereum port (default: none)
+      network_id: "5777", // Any network (default: none)
+    },
+    
     coverage: {
       host: "localhost", // Localhost (default: none)
       port: 8546, // Standard Ethereum port (default: none)
@@ -61,6 +67,7 @@ module.exports = {
       network_id: 1,
       websocket: true,
       networkCheckTimeout: 1000000,
+      gasPrice: 25000000000,
     },
 
     ropsten: {
@@ -83,6 +90,18 @@ module.exports = {
         );
       },
       network_id: 5,
+      websocket: true,
+      networkCheckTimeout: 1000000,
+    },
+
+    sepolia: {
+      provider: function () {
+        return new HDWalletProvider(
+          process.env.MNEMONIC,
+          `wss://sepolia.infura.io/ws/v3/${process.env.INFURA_PROJECT}`
+        );
+      },
+      network_id: 11155111,
       websocket: true,
       networkCheckTimeout: 1000000,
     },

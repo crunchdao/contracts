@@ -7,6 +7,7 @@
     "truffle": "truffle",
     "coverage": "truffle run coverage --network=coverage",
     "test": "truffle test --stacktrace --network development",
+    "remixd": "remixd -s .",
     "develop": "truffle develop"
   },
   "directories": {
@@ -27,7 +28,8 @@
   "devDependencies": {
     "ganache-cli": "^6.12.2",
     "solidity-coverage": "^0.8.0-beta.1",
-    "truffle-plugin-verify": "^0.5.26"
+    "remixd": "^0.2.4",
+    "truffle-plugin-verify": "^0.5.33"
   },
   "repository": {
     "type": "git",
